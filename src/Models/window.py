@@ -20,6 +20,9 @@ class Window:
         
         return self.window
 
+    def renderSurface(self,surface):
+         self.window.blit(surface, (0,0))
+
     def drawBtns(self):
 
         titleMenu = self.font.render("BATTLESHIP", True, (255, 255, 255))
