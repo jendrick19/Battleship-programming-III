@@ -1,14 +1,16 @@
 import pygame
 
-class Surface_1:
+class Surface:
 
-    def __init__(self,widthS, heightS):
+    def __init__(self, title, widthS, heightS):
         pygame.font.init()
         self.widthS=widthS
         self.heightS=heightS
-       
-        self.btnContinue= pygame.Rect(250,400,120,50)
-        self.btnReset= pygame.Rect(250,500,100,50)
+        self.title=title
+
+        self.titleSurface = pygame.Rect(350,25,100,50)
+        self.btnContinue = pygame.Rect(250,450,90,50)
+        self.btnReset = pygame.Rect(490,450,60,50)
        
         self.surface = pygame.Surface((widthS,heightS))
         self.surface.fill((0, 128, 255))
@@ -16,7 +18,7 @@ class Surface_1:
         self.gridSz = 10
         self.cellSz = 30
         self.xGrid = self.gridSz*self.cellSz
-        self.offset_x, self.offset_y = (self.widthS-self.xGrid)//2,80
+        self.offset_x, self.offset_y = (self.widthS-self.xGrid)//2,100
         self.gridP = None
         
         self.font = pygame.font.Font(None,24)
@@ -38,6 +40,12 @@ class Surface_1:
         pygame.display.flip()
         
     def drawBtn(self):
+
+        title = self.font.render(self.title, True, (255, 255, 255))
+        rectTitle = title.get_rect(center=self.titleSurface.center)
+
+        self.surface.blit(title,rectTitle)
+
         pygame.draw.rect(self.surface,(255,0,0), self.btnContinue)
         pygame.draw.rect(self.surface,(255,0,0), self.btnReset)
         
@@ -49,12 +57,3 @@ class Surface_1:
 
         self.surface.blit(textContinue, rectContinue)
         self.surface.blit(textReset, rectReset)
-        
-        
-    
-            
-
-
-                 
-                
-         
