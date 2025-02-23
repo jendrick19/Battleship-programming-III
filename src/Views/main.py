@@ -28,6 +28,9 @@ while execute:
                     surfacePlayer1.drawGrid()
                     surfacePlayer1.drawBtn()
                     window.renderSurface(surfacePlayer1.surface)
+                    
+                elif window.btnExit.collidepoint(mouse_pos):
+                    execute = False
 
             elif current_surface == surfacePlayer1:
                 if surfacePlayer1.btnContinue.collidepoint(mouse_pos):
