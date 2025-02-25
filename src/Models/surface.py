@@ -1,4 +1,5 @@
 import pygame
+from src.Models.ship import Ship
 
 class Surface:
 
@@ -9,24 +10,25 @@ class Surface:
         self.title=title
 
         self.titleSurface = pygame.Rect(350,25,100,50)
-        self.btnContinue = pygame.Rect(250,450,90,50)
-        self.btnReset = pygame.Rect(490,450,60,50)
+        self.btnContinue = pygame.Rect(250,545,90,50)
+        self.btnReset = pygame.Rect(490,545,60,50)
        
         self.surface = pygame.Surface((widthS,heightS))
         self.surface.fill((0, 128, 255))
         
         self.gridSz = 10
         self.cellSz = 30
-        self.xGrid = self.gridSz*self.cellSz
-        self.offset_x, self.offset_y = (self.widthS-self.xGrid)//2,100
+        self.xGrid = self.gridSz * self.cellSz
+        self.offset_x, self.offset_y = 50, 100
         self.gridP = None
+
+        self.ships = [Ship(4, 0, 0), Ship(3, 0, 2), Ship(2, 0, 4)]
         
         self.font = pygame.font.Font(None,24)
         
-        
     def create_Player_Grid(self):
-        self.gridP= [[' ' for _ in range(self.gridSze)] for _ in range(self.gridSz)]
-    
+        self.gridP= [[' ' for _ in range(self.gridSz)] for _ in range(self.gridSz)]
+
     def drawGrid(self):
         for row in range(self.gridSz):
             for col in range(self.gridSz):
@@ -34,6 +36,19 @@ class Surface:
                 y = self.offset_y + row * self.cellSz
                 rect = pygame.Rect(x, y, self.cellSz, self.cellSz)
                 pygame.draw.rect(self.surface, (0,0,0), rect, 1)
+    
+    def drawShips(self):
+        for ship in self.ships:
+            for i in range(ship.length):
+                x = self.offset_x + (ship.x + i) * self.cellSz
+                y = self.offset_y + ship.y * self.cellSz
+                rect = pygame.Rect(x, y, self.cellSz, self.cellSz)
+                pygame.draw.rect(self.surface, (0, 0, 0), rect)
+
+                row = y // self.cellSz 
+                col = x // self.cellSz  
+                if 0 <= row < self.gridSz and 0 <= col < self.gridSz:  
+                    self.gridP[row][col] = 'S'
     
     def updateWindow(self):
         
