@@ -1,3 +1,7 @@
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname('_file_'),'..','..')))
+
 import pygame
 from src.Models.window import Window
 from src.Models.surface import Surface
