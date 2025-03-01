@@ -9,7 +9,7 @@ class playingSurface:
         self.title = title
 
         self.titleSurface = pygame.Rect(350, 25, 100, 50)
-        self.btnEndShift = pygame.Rect(250, 545, 90, 50)
+        self.btnEndTurn = pygame.Rect(250, 545, 90, 50)
 
         self.surface = pygame.Surface((widthS, heightS))
         self.surface.fill((0, 128, 255))
@@ -61,10 +61,10 @@ class playingSurface:
 
         self.surface.blit(title, rectTitle)
 
-        pygame.draw.rect(self.surface, (255, 0, 0), self.btnEndShift)
+        pygame.draw.rect(self.surface, (255, 0, 0), self.btnEndTurn)
 
-        textEndShift = self.font.render('End Shift', True, (255, 255, 255))
+        textEndTurn = self.font.render('End Turn', True, (255, 255, 255))
 
-        rectEndShift = textEndShift.get_rect(center=self.btnEndShift.center)
+        rectEndTurn = textEndTurn.get_rect(center=self.btnEndTurn.center)
 
-        self.surface.blit(textEndShift, rectEndShift)
+        self.surface.blit(textEndTurn, rectEndTurn)

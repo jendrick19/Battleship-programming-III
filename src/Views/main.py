@@ -1,6 +1,6 @@
 import sys
 import os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__),'..','..')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 import pygame
 from src.Models.window import Window
 from src.Models.surface import Surface
@@ -25,7 +25,8 @@ execute = True
 current_surface = None
 
 while execute:
-    for event in pygame.event.get():
+    events = pygame.event.get()
+    for event in events:
         if event.type == pygame.QUIT:
             execute = False
 
@@ -34,7 +35,6 @@ while execute:
 
             if current_surface is None:
                 if window.btnPlay.collidepoint(mouse_pos):
-
                     current_surface = surfacePlayer1
                     surfacePlayer1.drawGrid()
                     surfacePlayer1.drawShips()
@@ -46,7 +46,6 @@ while execute:
 
             elif current_surface == surfacePlayer1:
                 if surfacePlayer1.btnContinue.collidepoint(mouse_pos):
-
                     current_surface = surfacePlayer2
                     surfacePlayer2.drawGrid()
                     surfacePlayer2.drawShips()
@@ -55,7 +54,6 @@ while execute:
 
             elif current_surface == surfacePlayer2:
                 if surfacePlayer2.btnContinue.collidepoint(mouse_pos):
-
                     current_surface = windowPlayer1
                     windowPlayer1.copyGridFrom(surfacePlayer1)
                     windowPlayer1.drawGridPosition()
@@ -64,19 +62,36 @@ while execute:
                     window.renderSurface(windowPlayer1.surface)
 
             elif current_surface == windowPlayer1:
-                if windowPlayer1.btnEndShift.collidepoint(mouse_pos):
-
+                if windowPlayer1.btnEndTurn.collidepoint(mouse_pos):
                     current_surface = windowPlayer2
                     windowPlayer2.copyGridFrom(surfacePlayer2)
                     windowPlayer2.drawGridPosition()
                     windowPlayer2.drawGridAttack()
                     windowPlayer2.drawBtn()
-                    window.renderSurface(windowPlayer2.surface) 
+                    window.renderSurface(windowPlayer2.surface)
+
+            elif current_surface == windowPlayer2:
+                if windowPlayer2.btnEndTurn.collidepoint(mouse_pos):
+                    current_surface = windowPlayer1
+                    windowPlayer1.copyGridFrom(surfacePlayer1)
+                    windowPlayer1.drawGridPosition()
+                    windowPlayer1.drawGridAttack()
+                    windowPlayer1.drawBtn()
+                    window.renderSurface(windowPlayer1.surface)
+
 
     if current_surface is not None:
+        if isinstance(current_surface, Surface):
+            current_surface.handle_events(events)
+            current_surface.surface.fill((0, 128, 255))
+            current_surface.drawGrid()
+            current_surface.drawShips()
+            current_surface.drawBtn()
         window.renderSurface(current_surface.surface)
-
     else:
         window.drawBtns()
 
     window.updateWindow()
+
+pygame.quit()
+sys.exit()
