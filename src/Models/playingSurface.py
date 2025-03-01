@@ -24,6 +24,9 @@ class playingSurface:
 
         self.font = pygame.font.Font(None, 24)
 
+        self.titlePosit_rect = pygame.Rect(self.offset_x1, self.offset_y1 - 40, 200, 50)
+        self.titleAttck_rect = pygame.Rect(self.offset_x2, self.offset_y2 - 40, 200, 50)
+
     def create_Player_Grid(self):
         self.gridP = [[' ' for _ in range(self.gridSz)] for _ in range(self.gridSz)]
         self.gridA = [[' ' for _ in range(self.gridSz)] for _ in range(self.gridSz)]
@@ -33,6 +36,11 @@ class playingSurface:
             self.gridP = [row[:] for row in surface.gridP]
 
     def drawGridPosition(self):
+        titlePosit = self.font.render('POSITIONS', True, (0, 0, 0))
+        rectTitlePosit = self.titlePosit_rect
+
+        self.surface.blit(titlePosit, rectTitlePosit)
+
         for row in range(self.gridSz):
             for col in range(self.gridSz):
                 x = self.offset_x1 + col * self.cellSz
@@ -45,6 +53,11 @@ class playingSurface:
 
    
     def drawGridAttack(self):
+        titleAttck = self.font.render('ATTACK', True, (0, 0, 0))
+        rectTitleAttck = self.titleAttck_rect
+
+        self.surface.blit(titleAttck, rectTitleAttck)
+
         for row in range(self.gridSz):
             for col in range(self.gridSz):
                 x = self.offset_x2 + col * self.cellSz
