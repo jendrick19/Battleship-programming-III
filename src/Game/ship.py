@@ -48,8 +48,32 @@ class Ship:
 
         print(f"The boat has been correctly placed in: {x},{y}")
         return True
-     
+    
+    def place_ship(self,board):
+        x,y = self.position
+        
+        if self.verify_board(board) == False:
+            print("Cannot place boat")
+            return False
+
+        if self.orientation == "horizontal":
+            for i in range(self.size):
+                board[x][y+i] = 1
+            
+        elif self.orientation == "vertical":
+            for i in range(self.size):
+                board[x+i][y] = 1
+        
+        elif self.orientation == "diagonal":
+            for i in range(self.size):
+                board[x+i][y+i] = 1
+        
+        print(f"The ship {self.name} has been successfully placed in position {self.position} and orientation {self.orientation}")
+        
+    
+    
 print_board(board)
-ship = Ship('Submarino',1,'diagonal',[1,1])
-prueba_verify_board = ship.verify_board(board)
+ship = Ship('Submarino',5,'horizontal',[3,2])
+prueba_verify_board = ship.place_ship(board)
 print(prueba_verify_board)
+print_board(board)
