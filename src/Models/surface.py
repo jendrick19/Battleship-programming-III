@@ -27,7 +27,7 @@ class Surface:
         self.font = pygame.font.Font(None, 24)
         
     def create_Player_Grid(self):
-        self.gridP = [[' ' for _ in range(self.gridSz)] for _ in range(self.gridSz)]
+        self.gridP = Board(self.gridSz)
 
     def drawGrid(self):
         for row in range(self.gridSz):

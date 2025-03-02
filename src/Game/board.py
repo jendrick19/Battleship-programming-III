@@ -44,6 +44,7 @@ class Board:
         return [['x'if esp=='x' else 'o' if esp=='o' else 'w' for esp in row] for row in self.grid]
     
 
+#Pruebas del tablero
 t= Board(10)
 print(t.size)
 print(t.verify_limi(10,11))
