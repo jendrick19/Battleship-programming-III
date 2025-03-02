@@ -11,6 +11,7 @@ class Ship:
         self.size = size
         self.orientation = orientation
         self.position = position
+        self.life = size
         
     def verify_board(self,board):
         x,y = self.position
@@ -69,11 +70,19 @@ class Ship:
                 board[x+i][y+i] = 1
         
         print(f"The ship {self.name} has been successfully placed in position {self.position} and orientation {self.orientation}")
+        return True
+        
+    def check_sunken_ship(self):
+        if self.life == 0:
+            print(f"the ship {self.name} is sunken")
+            return True
+        else:
+            print(f"The ship {self.name} is not sunken and has {self.life} lives left")
+            return False
         
     
-    
 print_board(board)
-ship = Ship('Submarino',5,'horizontal',[3,2])
-prueba_verify_board = ship.place_ship(board)
-print(prueba_verify_board)
+ship = Ship('Submarino',1,'horizontal',[3,2])
+print(ship.place_ship(board))
 print_board(board)
+ship.check_sunken_ship() 
