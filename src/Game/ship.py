@@ -11,40 +11,45 @@ class Ship:
         self.size = size
         self.orientation = orientation
         self.position = position
-    
-    #Preguntar si debo implementarlo para que el jugador eliga los atributos y pensar como hacerlo    
-    def veify_board(self,board):
+        
+    def verify_board(self,board):
         x,y = self.position
 
         if self.orientation == "horizontal":
             if y + self.size > len(board[0]):
+                print("Horizontal limit exceeded")
                 return False 
             for i in range(self.size):
                 if board[x][y + i] != 0:
+                    print("One of the cells horizontally is occupied")
                     return False
         
         elif self.orientation == "vertical":
             if x + self.size > len(board):
+                print("Vertical limit exceeded")
                 return False
             for i in range(self.size):
                 if board[x + i][y] != 0:
+                    print("One of the cells vertically is occupied")
                     return False
         
         elif self.orientation == "diagonal":
             if x + self.size > len(board) or y + self.size > len(board[0]):
+                print("Diagonal limit exceeded")
                 return False
             for i in range(self.size):
                 if board[x + i][y+i] != 0:
+                    print("One of the cells diagonally is occupied")
                     return False
         
         elif self.orientation != 'horizontal' and self.orientation != 'vertical'and self.orientation != 'diagonal':
-            print('Haz establecido una orientación incorrecta')
+            print('You have set the wrong orientation')
             return False
 
-        
+        print(f"The boat has been correctly placed in: {x},{y}")
         return True
      
 print_board(board)
-ship = Ship('Submarino',2,'horizontal',[1,1])
-prueba_verify_board = ship.veify_board(board)
+ship = Ship('Submarino',1,'diagonal',[1,1])
+prueba_verify_board = ship.verify_board(board)
 print(prueba_verify_board)
