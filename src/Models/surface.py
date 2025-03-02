@@ -1,5 +1,6 @@
 import pygame
 from src.Models.ship import Ship
+from src.Game.board import Board
 
 class Surface:
     def __init__(self, title, widthS, heightS):
