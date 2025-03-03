@@ -11,40 +11,78 @@ class Ship:
         self.size = size
         self.orientation = orientation
         self.position = position
-    
-    #Preguntar si debo implementarlo para que el jugador eliga los atributos y pensar como hacerlo    
-    def veify_board(self,board):
+        self.life = size
+        
+    def verify_board(self,board):
         x,y = self.position
 
         if self.orientation == "horizontal":
             if y + self.size > len(board[0]):
+                print("Horizontal limit exceeded")
                 return False 
             for i in range(self.size):
                 if board[x][y + i] != 0:
+                    print("One of the cells horizontally is occupied")
                     return False
         
         elif self.orientation == "vertical":
             if x + self.size > len(board):
+                print("Vertical limit exceeded")
                 return False
             for i in range(self.size):
                 if board[x + i][y] != 0:
+                    print("One of the cells vertically is occupied")
                     return False
         
         elif self.orientation == "diagonal":
             if x + self.size > len(board) or y + self.size > len(board[0]):
+                print("Diagonal limit exceeded")
                 return False
             for i in range(self.size):
                 if board[x + i][y+i] != 0:
+                    print("One of the cells diagonally is occupied")
                     return False
         
         elif self.orientation != 'horizontal' and self.orientation != 'vertical'and self.orientation != 'diagonal':
-            print('Haz establecido una orientación incorrecta')
+            print('You have set the wrong orientation')
             return False
 
-        
+        print(f"The boat has been correctly placed in: {x},{y}")
         return True
-     
+    
+    def place_ship(self,board):
+        x,y = self.position
+        
+        if self.verify_board(board) == False:
+            print("Cannot place boat")
+            return False
+
+        if self.orientation == "horizontal":
+            for i in range(self.size):
+                board[x][y+i] = 1
+            
+        elif self.orientation == "vertical":
+            for i in range(self.size):
+                board[x+i][y] = 1
+        
+        elif self.orientation == "diagonal":
+            for i in range(self.size):
+                board[x+i][y+i] = 1
+        
+        print(f"The ship {self.name} has been successfully placed in position {self.position} and orientation {self.orientation}")
+        return True
+        
+    def check_sunken_ship(self):
+        if self.life == 0:
+            print(f"the ship {self.name} is sunken")
+            return True
+        else:
+            print(f"The ship {self.name} is not sunken and has {self.life} lives left")
+            return False
+        
+    
 print_board(board)
-ship = Ship('Submarino',2,'horizontal',[1,1])
-prueba_verify_board = ship.veify_board(board)
-print(prueba_verify_board)
+ship = Ship('Submarino',1,'horizontal',[3,2])
+print(ship.place_ship(board))
+print_board(board)
+ship.check_sunken_ship() 
