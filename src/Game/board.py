@@ -1,3 +1,5 @@
+from ship import Ship
+
 class Board:
     size = 10
     def __init__(self,size):
@@ -10,7 +12,7 @@ class Board:
     
     def verify_space(self,ship): 
     # metodo para verificar si se puede colocar el barco en espera el desarrollo de la clase barco
-        for row, col in ship.posicion:
+        for row, col in ship.position:
             if not self.verify_limi(row, col) or self.grid[row][col] != 'w':
                 return False
         return True
@@ -18,7 +20,7 @@ class Board:
     def place_ship(self,ship):
         #igual utiliza la clase ship asi que en espera del desarrollo de esta clase
         if self.verify_space(ship):
-            for row, col in ship.posicion:
+            for row, col in ship.position:
                 self.grid[row][col] = 's'
             self.ships.append(ship)
             return True

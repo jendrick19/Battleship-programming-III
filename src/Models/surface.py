@@ -38,7 +38,7 @@ class Surface:
                 pygame.draw.rect(self.surface, (0, 0, 0), rect, 1)
     
     def drawShips(self):
-        self.gridP = [[' ' for _ in range(self.gridSz)] for _ in range(self.gridSz)]
+        self.gridP = Board(self.gridSz)
         for ship in self.ships:
             ship.draw(self.surface, self.offset_x, self.offset_y, self.cellSz)
             for i in range(ship.length):
