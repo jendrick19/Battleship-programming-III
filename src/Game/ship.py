@@ -1,9 +1,6 @@
-#Esto solo es para modo de prueba, luego de haber probado y terminado será eliminado
-def print_board(board):
-    for row in board:
-        print(" ".join(map(str, row)))
-board_size = 5
-board = [[0 for _ in range(board_size)] for _ in range(board_size)]
+#Si van ejecutar el programa en otro archivo python 
+#deben comentar el import que hice acá, o sino les dará error
+from board import Board
 
 class Ship:
     def __init__(self,name,size,orientation,position):
@@ -12,77 +9,62 @@ class Ship:
         self.orientation = orientation
         self.position = position
         self.life = size
-        
-    def verify_board(self,board):
-        x,y = self.position
-
-        if self.orientation == "horizontal":
-            if y + self.size > len(board[0]):
-                print("Horizontal limit exceeded")
-                return False 
-            for i in range(self.size):
-                if board[x][y + i] != 0:
-                    print("One of the cells horizontally is occupied")
-                    return False
-        
-        elif self.orientation == "vertical":
-            if x + self.size > len(board):
-                print("Vertical limit exceeded")
-                return False
-            for i in range(self.size):
-                if board[x + i][y] != 0:
-                    print("One of the cells vertically is occupied")
-                    return False
-        
-        elif self.orientation == "diagonal":
-            if x + self.size > len(board) or y + self.size > len(board[0]):
-                print("Diagonal limit exceeded")
-                return False
-            for i in range(self.size):
-                if board[x + i][y+i] != 0:
-                    print("One of the cells diagonally is occupied")
-                    return False
-        
-        elif self.orientation != 'horizontal' and self.orientation != 'vertical'and self.orientation != 'diagonal':
-            print('You have set the wrong orientation')
-            return False
-
-        print(f"The boat has been correctly placed in: {x},{y}")
-        return True
     
-    def place_ship(self,board):
-        x,y = self.position
-        
-        if self.verify_board(board) == False:
-            print("Cannot place boat")
-            return False
-
-        if self.orientation == "horizontal":
-            for i in range(self.size):
-                board[x][y+i] = 1
-            
-        elif self.orientation == "vertical":
-            for i in range(self.size):
-                board[x+i][y] = 1
-        
-        elif self.orientation == "diagonal":
-            for i in range(self.size):
-                board[x+i][y+i] = 1
-        
-        print(f"The ship {self.name} has been successfully placed in position {self.position} and orientation {self.orientation}")
+    def verify_board(self,board):
+        for row, col in self.position:
+            if not board.verify_limi(row,col):
+                print("The ship exceeds the defined coordinates")
+                return False
+        print("If space is available")
         return True
+        
+    def place_ship(self,board):
+        if self.verify_board(board):
+            board.place_ship(self)
+            print(f"Ship {self.name} has been placed in {self.position} with orientation {self.orientation} correctly")
+            return True
+        else: 
+            print(f"ship {self.name} could not be placed")
+            return False
         
     def check_sunken_ship(self):
         if self.life == 0:
-            print(f"the ship {self.name} is sunken")
+            print(f"The ship {self.name} is sunken")
             return True
         else:
-            print(f"The ship {self.name} is not sunken and has {self.life} lives left")
-            return False
-        
+            print(f"The ship {self.name} is not sunk and has {self.life} lives left.")
+            
+    def damage_received_ship(self):
+        if self.check_sunken_ship == True:
+            print(f"the ship {self.name} is sunken")
+        else:
+            self.life -= 1
+            print(f"The ship {self.name} has received damage")  
     
-print_board(board)
-ship = Ship('Submarino',1,'horizontal',[3,2])
-print(ship.place_ship(board))
-print_board(board)
-ship.check_sunken_ship() 
+    #Método para imprimir el tablero solo lo usé para ver si todo iba bien
+    def print_board(self, board):
+        for row in board.grid:
+            print(" ".join(row))
+        
+
+#Fase de pruebas                      
+# Crear un tablero de 10x10
+board = Board(10)
+# Crear algunos barcos
+ship1 = Ship('Submarino1', 3, 'horizontal', [(1, 1), (1, 2), (1, 3)])
+ship2 = Ship('Submarino2', 2, 'vertical', [(3, 2), (4, 2)])  
+# Colocar los barcos en el tablero
+ship1.place_ship(board)
+ship2.place_ship(board)
+# Imprimir el estado inicial del tablero
+print("\nEstado inicial del tablero:")
+ship1.print_board(board)
+# Verificar el estado de los barcos después de los disparos
+ship1.damage_received_ship()  # El barco 1 recibe daño
+ship2.damage_received_ship()  # El barco 2 recibe daño
+# Verificar si algún barco está hundido
+ship1.check_sunken_ship()
+ship2.check_sunken_ship()
+# Imprimir el estado del tablero después de los disparos
+print("\nEstado del tablero después de los disparos:")
+ship1.print_board(board)
