@@ -1,4 +1,4 @@
-from ship import Ship
+#from ship import Ship
 
 class Board:
     size = 10
@@ -11,14 +11,12 @@ class Board:
         return 0 <= row <= self.size and 0 <= col <= self.size
     
     def verify_space(self,ship): 
-    # metodo para verificar si se puede colocar el barco en espera el desarrollo de la clase barco
         for row, col in ship.position:
             if not self.verify_limi(row, col) or self.grid[row][col] != 'w':
                 return False
         return True
 
     def place_ship(self,ship):
-        #igual utiliza la clase ship asi que en espera del desarrollo de esta clase
         if self.verify_space(ship):
             for row, col in ship.position:
                 self.grid[row][col] = 's'
@@ -46,14 +44,18 @@ class Board:
         return [['x'if esp=='x' else 'o' if esp=='o' else 'w' for esp in row] for row in self.grid]
     
 
-#Pruebas del tablero
+"""Pruebas del tablero
 t= Board(10)
+#Imprimo tamaño del tablero
 print(t.size)
+#Verifico diferentes disparos en el tablero, fuera de los limites y dentro de ellos
 print(t.verify_limi(10,11))
 print(t.register_shot(1,1))
 print(t.register_shot(1,12))
 print(t.register_shot(1,1))
+#Verifico si registra un impacto a una casilla en donde señala hay un barco
 t.grid[1][2]="s"
 print(t.register_shot(1,2))
 print(t.register_shot(1,2))
-print (t.board_state)
+#Imprimo el estado del tablero
+print (t.board_state)"""
