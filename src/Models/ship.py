@@ -11,7 +11,7 @@ class Ship:
         self.offset_x = 0
         self.offset_y = 0
 
-    def handle_event(self, event, offset_x, offset_y, cell_size):
+    def handle_event(self, event, offset_x, offset_y, cell_size, gridSize=10):
         if event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1:
                 mouse_x, mouse_y = event.pos
@@ -32,12 +32,20 @@ class Ship:
                 
                 self.x = round((self.x * cell_size) / cell_size)
                 self.y = round((self.y * cell_size) / cell_size)
+                
+                self.x = max(0, min(gridSize - self.length, self.x))
+                self.y = max(0, min(gridSize - 1, self.y))
 
         elif event.type == pygame.MOUSEMOTION:
             if self.dragging:
+                
                 mouse_x, mouse_y = event.pos
-                self.x = (mouse_x - offset_x + self.offset_x) / cell_size
-                self.y = (mouse_y - offset_y + self.offset_y) / cell_size
+    
+                new_x = (mouse_x - offset_x + self.offset_x) / cell_size
+                new_y = (mouse_y - offset_y + self.offset_y) / cell_size
+                
+                self.x = max(0, min(gridSize - self.length, new_x))
+                self.y = max(0, min(gridSize - 1, new_y))
 
     def draw(self, surface, offset_x, offset_y, cell_size):
         for i in range(self.length):

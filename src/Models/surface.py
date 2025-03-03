@@ -69,4 +69,4 @@ class Surface:
     def handle_events(self, events):
         for event in events:
             for ship in self.ships:
-                ship.handle_event(event, self.offset_x, self.offset_y, self.cellSz)
+                ship.handle_event(event, self.offset_x, self.offset_y, self.cellSz, self.gridSz)
