@@ -1,9 +1,10 @@
 # Battleship-programming-III
-Batalla Naval: Aprendiendo a programar juegos en equipo   Este proyecto de Batalla Naval fue desarrollado como parte de la materia de Programación 3 en la Universidad Centroccidental Lisandro Alvarado
+
+Batalla Naval: Aprendiendo a programar juegos en equipo Este proyecto de Batalla Naval fue desarrollado como parte de la materia de Programación 3 en la Universidad Centroccidental Lisandro Alvarado
 
 🛠️ Tecnologías
 
-Python 
+Python
 
 🔧 Instalación y Configuración
 
@@ -68,3 +69,43 @@ No añadas dependencias sin discutirlo primero
 No modifiques la configuración del proyecto sin consenso
 
 Evita ser grosero o imponerte en las discusiones
+
+## 📃 Documentación
+
+### Instalación
+
+1. Clona el repositorio:
+   ```sh
+   git clone https://github.com/jendrick19/Battleship-programming-III.git
+   ```
+2. Navega al directorio del proyecto:
+   ```sh
+   cd Battleship-programming-III
+   ```
+3. Instala las dependencias:
+   ```sh
+   pip install pygame
+   ```
+
+## 🚀 Ejecución del Proyecto
+
+Para ejecutar el proyecto, simplemente corre el archivo main.py:
+
+```sh
+python src/Views/main.py
+```
+
+## 📁 Estructura del proyecto
+
+```
+.gitignore
+README.md
+src/
+    Models/
+        playingSurface.py
+        ship.py
+        surface.py
+        window.py
+    Views/
+        main.py
+```
