@@ -69,7 +69,6 @@ while execute:
                     windowPlayer2.drawGridAttack()
                     windowPlayer2.drawBtn()
                     window.renderSurface(windowPlayer2.surface)
-                    windowPlayer2.handle_events(events)
 
             elif current_surface == windowPlayer2:
                 if windowPlayer2.btnEndTurn.collidepoint(mouse_pos):
@@ -79,7 +78,6 @@ while execute:
                     windowPlayer1.drawGridAttack()
                     windowPlayer1.drawBtn()
                     window.renderSurface(windowPlayer1.surface)
-                    windowPlayer1.handle_events(events)
 
 
     if current_surface is not None:
