@@ -1,4 +1,5 @@
 import pygame
+from src.Game.board import Board
 
 class playingSurface:
 
@@ -28,12 +29,13 @@ class playingSurface:
         self.titleAttck_rect = pygame.Rect(self.offset_x2, self.offset_y2 - 40, 200, 50)
 
     def create_Player_Grid(self):
-        self.gridP = [[' ' for _ in range(self.gridSz)] for _ in range(self.gridSz)]
-        self.gridA = [[' ' for _ in range(self.gridSz)] for _ in range(self.gridSz)]
+        self.gridP = Board(self.gridSz)
+        self.gridA = Board(self.gridSz)
     
     def copyGridFrom(self, surface):
         if surface.gridP:
-            self.gridP = [row[:] for row in surface.gridP]
+            self.gridP = [row[:] for row in surface.gridP.grid]
+            self.gridA = [row[:] for row in surface.gridP.grid]
 
     def drawGridPosition(self):
         titlePosit = self.font.render('POSITIONS', True, (0, 0, 0))
@@ -49,7 +51,7 @@ class playingSurface:
                 pygame.draw.rect(self.surface, (0, 0, 0), rect, 1)
 
                 if self.gridP and self.gridP[row][col] == 'S':  
-                    pygame.draw.rect(self.surface, (255, 0, 0), rect) 
+                    pygame.draw.rect(self.surface, (0, 0, 0), rect) 
 
    
     def drawGridAttack(self):
@@ -77,7 +79,7 @@ class playingSurface:
         pygame.draw.rect(self.surface, (255, 0, 0), self.btnEndTurn)
 
         textEndTurn = self.font.render('End Turn', True, (255, 255, 255))
-
         rectEndTurn = textEndTurn.get_rect(center=self.btnEndTurn.center)
 
         self.surface.blit(textEndTurn, rectEndTurn)
+        

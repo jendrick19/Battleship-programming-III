@@ -1,5 +1,3 @@
-#from ship import Ship
-
 class Board:
     size = 10
     def __init__(self,size):
@@ -41,21 +39,4 @@ class Board:
         return "Ya se ataco esa casilla"
 
     def board_state(self):
-        return [['x'if esp=='x' else 'o' if esp=='o' else 'w' for esp in row] for row in self.grid]
-    
-
-"""Pruebas del tablero
-t= Board(10)
-#Imprimo tamaño del tablero
-print(t.size)
-#Verifico diferentes disparos en el tablero, fuera de los limites y dentro de ellos
-print(t.verify_limi(10,11))
-print(t.register_shot(1,1))
-print(t.register_shot(1,12))
-print(t.register_shot(1,1))
-#Verifico si registra un impacto a una casilla en donde señala hay un barco
-t.grid[1][2]="s"
-print(t.register_shot(1,2))
-print(t.register_shot(1,2))
-#Imprimo el estado del tablero
-print (t.board_state)"""
+        return [['x'if esp=='x' else 'o' if esp=='o' else 'w' for esp in row] for row in self.grid] 

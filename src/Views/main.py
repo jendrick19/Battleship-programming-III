@@ -11,9 +11,9 @@ pygame.init()
 window = Window(800, 600, 'BATTLESHIP')
 window.drawBtns()
 
-surfacePlayer1 = Surface('Choose the position of your ships player 1', 800, 600,250,100)
+surfacePlayer1 = Surface('Choose the position of your ships player 1', 800, 600, 250, 100)
 surfacePlayer1.create_Player_Grid()
-surfacePlayer2 = Surface('Choose the position of your ships player 2', 800, 600,250,100)
+surfacePlayer2 = Surface('Choose the position of your ships player 2', 800, 600, 250, 100)
 surfacePlayer2.create_Player_Grid()
 
 windowPlayer1 = playingSurface('Turn player 1', 800, 600)
@@ -69,6 +69,7 @@ while execute:
                     windowPlayer2.drawGridAttack()
                     windowPlayer2.drawBtn()
                     window.renderSurface(windowPlayer2.surface)
+                    windowPlayer2.handle_events(events)
 
             elif current_surface == windowPlayer2:
                 if windowPlayer2.btnEndTurn.collidepoint(mouse_pos):
@@ -78,6 +79,7 @@ while execute:
                     windowPlayer1.drawGridAttack()
                     windowPlayer1.drawBtn()
                     window.renderSurface(windowPlayer1.surface)
+                    windowPlayer1.handle_events(events)
 
 
     if current_surface is not None:

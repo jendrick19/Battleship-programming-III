@@ -40,6 +40,7 @@ class Surface:
     
     def drawShips(self):
         self.gridP = Board(self.gridSz)
+        
         for ship in self.ships:
             ship.draw(self.surface, self.offset_x, self.offset_y, self.cellSz)
             
@@ -48,13 +49,13 @@ class Surface:
                     row = int(ship.y)
                     col = int(ship.x + i)
                     if 0 <= row < self.gridSz and 0 <= col < self.gridSz:
-                        self.gridP[row][col] = 'S'
+                        self.gridP.grid[row][col] = 'S'
             else:
                 for i in range(ship.length):
                     row = int(ship.y + i)
                     col = int(ship.x)
                     if 0 <= row < self.gridSz and 0 <= col < self.gridSz:
-                        self.gridP[row][col] = 'S'
+                        self.gridP.grid[row][col] = 'S'
     
     def updateWindow(self):
         pygame.display.flip()

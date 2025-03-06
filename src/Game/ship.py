@@ -1,5 +1,3 @@
-#Si van ejecutar el programa en otro archivo python 
-#deben comentar el import que hice acá, o sino les dará error
 from board import Board
 
 class Ship:
