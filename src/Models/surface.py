@@ -1,5 +1,6 @@
 import pygame
 from src.Models.ship import Ship
+from src.Game.board import Board
 
 class Surface:
     def __init__(self, title, widthS, heightS, offset_x, offset_y):
@@ -27,7 +28,7 @@ class Surface:
         self.font = pygame.font.Font(None, 24)
         
     def create_Player_Grid(self):
-        self.gridP = [[' ' for _ in range(self.gridSz)] for _ in range(self.gridSz)]
+        self.gridP = Board(self.gridSz)
 
     def drawGrid(self):
         for row in range(self.gridSz):
@@ -38,7 +39,7 @@ class Surface:
                 pygame.draw.rect(self.surface, (0, 0, 0), rect, 1)
     
     def drawShips(self):
-        self.gridP = [[' ' for _ in range(self.gridSz)] for _ in range(self.gridSz)]
+        self.gridP = Board(self.gridSz)
         for ship in self.ships:
             ship.draw(self.surface, self.offset_x, self.offset_y, self.cellSz)
             
