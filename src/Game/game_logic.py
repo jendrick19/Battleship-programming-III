@@ -1,26 +1,40 @@
-from board import board
-from ship import ship
+from board import Board
+from ship import Ship
 
 class Game:
     def __init__(self):
-        #Prueba tablero
-        self.board = board(10)
-        #Barco de ejemplo
-        self.ships = [ship([(1, 1), (1, 2), (1, 3)])]
+        """Inicializa el tablero y coloca los barcos"""
+        self.board = Board(10)
+        self.ships = [
+            Ship('Destructor', 3, 'horizontal', [(2, 3), (2, 4), (2, 5)]),
+            Ship('Crucero', 2, 'vertical', [(5, 5), (6, 5)])
+        ]
+        for ship in self.ships:
+            ship.place_ship(self.board)
 
+    #Metodo para los disparos
     def shoot(self, row, col):
-        """Valida y ejecuta un disparo."""
-        if not self.board.is_valid_shot(row, col):
-            print("Disparo inválido, intenta otra coordenada.")
-            return False
-        
-        hit = any(ship.register_hit(row, col) for ship in self.ships)
-        self.board.register_shot(row, col, hit)
+        if not (0 <= row < self.board.size and 0 <= col < self.board.size):
+            print("Casilla fuera de rango")
+            return
 
-        if hit:
-            print("¡Impacto!")
-        else:
-            print("Agua.")
+        result = self.board.register_shot(row, col)
+        print(result)
+        self.display_board()
 
-        self.board.display()
-        return True
+
+
+    def display_board(self):
+        """Muestra el estado actual del tablero"""
+        for row in self.board.board_state():
+            print(" ".join(row))
+        print()
+
+# Prueba del juego
+game = Game()
+game.shoot(2, 3)  # Impacto
+game.shoot(5, 5)  # Impacto
+game.shoot(6, 5)  # ¡Barco hundido!
+game.shoot(0, 0)  # Disparo fallido
+game.shoot(2, 3)  # Ya se atacó esa casilla
+game.shoot(10, 10)  # Casilla fuera de rango
