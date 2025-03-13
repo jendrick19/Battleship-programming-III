@@ -11,9 +11,9 @@ pygame.init()
 window = Window(800, 600, 'BATTLESHIP')
 window.drawBtns()
 
-surfacePlayer1 = Surface('Choose the position of your ships player 1', 800, 600)
+surfacePlayer1 = Surface('Choose the position of your ships player 1', 800, 600, 250, 100)
 surfacePlayer1.create_Player_Grid()
-surfacePlayer2 = Surface('Choose the position of your ships player 2', 800, 600)
+surfacePlayer2 = Surface('Choose the position of your ships player 2', 800, 600, 250, 100)
 surfacePlayer2.create_Player_Grid()
 
 windowPlayer1 = playingSurface('Turn player 1', 800, 600)

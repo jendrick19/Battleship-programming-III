@@ -3,7 +3,7 @@ from src.Models.ship import Ship
 from src.Game.board import Board
 
 class Surface:
-    def __init__(self, title, widthS, heightS):
+    def __init__(self, title, widthS, heightS, offset_x, offset_y):
         pygame.font.init()
         self.widthS = widthS
         self.heightS = heightS
@@ -19,10 +19,11 @@ class Surface:
         self.gridSz = 10
         self.cellSz = 30
         self.xGrid = self.gridSz * self.cellSz
-        self.offset_x, self.offset_y = 50, 100
+        self.offset_x = offset_x
+        self.offset_y= offset_y
         self.gridP = None
 
-        self.ships = [Ship(4, 0, 0), Ship(3, 0, 2), Ship(2, 0, 4)]
+        self.ships = [Ship(4, 0, 0, True), Ship(3, 0, 2, True), Ship(2, 0, 4, True)]
         
         self.font = pygame.font.Font(None, 24)
         
@@ -39,13 +40,22 @@ class Surface:
     
     def drawShips(self):
         self.gridP = Board(self.gridSz)
+        
         for ship in self.ships:
             ship.draw(self.surface, self.offset_x, self.offset_y, self.cellSz)
-            for i in range(ship.length):
-                row = int(ship.y)
-                col = int(ship.x + i)
-                if 0 <= row < self.gridSz and 0 <= col < self.gridSz:
-                    self.gridP[row][col] = 'S'
+            
+            if ship.isHorizontal:
+                for i in range(ship.length):
+                    row = int(ship.y)
+                    col = int(ship.x + i)
+                    if 0 <= row < self.gridSz and 0 <= col < self.gridSz:
+                        self.gridP.grid[row][col] = 'S'
+            else:
+                for i in range(ship.length):
+                    row = int(ship.y + i)
+                    col = int(ship.x)
+                    if 0 <= row < self.gridSz and 0 <= col < self.gridSz:
+                        self.gridP.grid[row][col] = 'S'
     
     def updateWindow(self):
         pygame.display.flip()
@@ -66,8 +76,11 @@ class Surface:
 
         self.surface.blit(textContinue, rectContinue)
         self.surface.blit(textReset, rectReset)
+        
+        textRotate = self.font.render('Press SPACE while dragging to rotate', True, (255, 255, 255))
+        self.surface.blit(textRotate, (self.offset_x, self.offset_y + self.gridSz * self.cellSz + 10))
 
     def handle_events(self, events):
         for event in events:
             for ship in self.ships:
-                ship.handle_event(event, self.offset_x, self.offset_y, self.cellSz)
+                ship.handle_event(event, self.offset_x, self.offset_y, self.cellSz, self.gridSz)
