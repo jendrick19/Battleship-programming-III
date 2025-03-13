@@ -1,6 +1,39 @@
 from board import Board
 from ship import Ship
 
+class GameLogic:
+    def _init_(self, player1, player2):
+        self.player1 = player1
+        self.player2 = player2
+        
+
+    def update_sunk_ships (self, is_player):
+        if is_player:
+         shipSunkens = 0
+         ship= ship.check_sunken_ships
+        if is_player:
+            for ship in self.player1.ships:
+                if ship.check_sunken_ship():
+                    shipSunkens += 1
+            self.player1.shipSunkens = shipSunkens
+        else:
+            for ship in self.player2.ships:
+                if ship.check_sunken_ship():
+                    shipSunkens += 1
+            self.player2.shipSunkens = shipSunkens
+
+        
+    def check_victory (self, is_player):
+        if is_player:
+         if self.player1.shipSunkens == len (self.player1.ships):
+            print("El jugador 2 ha ganado")
+            return True
+        if self.player2.shipSunkens == len (self.player2.ships):
+            print("El jugador 1 ha ganado")
+            return True
+        else:
+            return False
+
 class Game:
     def __init__(self):
         """Inicializa el tablero y coloca los barcos"""
