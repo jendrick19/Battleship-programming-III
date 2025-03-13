@@ -25,8 +25,8 @@ class playingSurface:
 
         self.font = pygame.font.Font(None, 24)
 
-        self.titlePosit_rect = pygame.Rect(self.offset_x1, self.offset_y1 - 40, 200, 50)
-        self.titleAttck_rect = pygame.Rect(self.offset_x2, self.offset_y2 - 40, 200, 50)
+        self.titlePosit_rect = pygame.Rect(self.offset_x1 + (self.xGrid // 2) - 45, self.offset_y1 - 40, 200, 50)
+        self.titleAttck_rect = pygame.Rect(self.offset_x2 + (self.xGrid // 2) - 30, self.offset_y2 - 40, 200, 50)
 
     def create_Player_Grid(self):
         self.gridP = Board(self.gridSz)
