@@ -3,26 +3,19 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 import pygame
 from src.Models.window import Window
-from src.Models.surface import Surface
-from src.Models.playingSurface import playingSurface
+from src.Models.gameSurface import GameSurface
 
 pygame.init()
 
 window = Window(800, 600, 'BATTLESHIP')
 window.drawBtns()
 
-surfacePlayer1 = Surface('Choose the position of your ships player 1', 800, 600, 250, 100)
-surfacePlayer1.create_Player_Grid()
-surfacePlayer2 = Surface('Choose the position of your ships player 2', 800, 600, 250, 100)
-surfacePlayer2.create_Player_Grid()
-
-windowPlayer1 = playingSurface('Turn player 1', 800, 600)
-windowPlayer1.create_Player_Grid()
-windowPlayer2 = playingSurface('Turn player 2', 800, 600)
-windowPlayer2.create_Player_Grid()
+surfacePlayer1 = GameSurface('Choose the position of your ships player 1', 800, 600)
+surfacePlayer2 = GameSurface('Choose the position of your ships player 2', 800, 600)
 
 execute = True
 current_surface = None
+game_started = False
 
 while execute:
     events = pygame.event.get()
@@ -36,57 +29,52 @@ while execute:
             if current_surface is None:
                 if window.btnPlay.collidepoint(mouse_pos):
                     current_surface = surfacePlayer1
-                    surfacePlayer1.drawGrid()
-                    surfacePlayer1.drawShips()
-                    surfacePlayer1.drawBtn()
-                    window.renderSurface(surfacePlayer1.surface)
+                    current_surface.draw()
+                    window.renderSurface(current_surface.surface)
 
                 elif window.btnExit.collidepoint(mouse_pos):
                     execute = False
 
-            elif current_surface == surfacePlayer1:
-                if surfacePlayer1.btnContinue.collidepoint(mouse_pos):
-                    current_surface = surfacePlayer2
-                    surfacePlayer2.drawGrid()
-                    surfacePlayer2.drawShips()
-                    surfacePlayer2.drawBtn()
-                    window.renderSurface(surfacePlayer2.surface)
-
-            elif current_surface == surfacePlayer2:
-                if surfacePlayer2.btnContinue.collidepoint(mouse_pos):
-                    current_surface = windowPlayer1
-                    windowPlayer1.copyGridFrom(surfacePlayer1)
-                    windowPlayer1.drawGridPosition()
-                    windowPlayer1.drawGridAttack()
-                    windowPlayer1.drawBtn()
-                    window.renderSurface(windowPlayer1.surface)
-
-            elif current_surface == windowPlayer1:
-                if windowPlayer1.btnEndTurn.collidepoint(mouse_pos):
-                    current_surface = windowPlayer2
-                    windowPlayer2.copyGridFrom(surfacePlayer2)
-                    windowPlayer2.drawGridPosition()
-                    windowPlayer2.drawGridAttack()
-                    windowPlayer2.drawBtn()
-                    window.renderSurface(windowPlayer2.surface)
-
-            elif current_surface == windowPlayer2:
-                if windowPlayer2.btnEndTurn.collidepoint(mouse_pos):
-                    current_surface = windowPlayer1
-                    windowPlayer1.copyGridFrom(surfacePlayer1)
-                    windowPlayer1.drawGridPosition()
-                    windowPlayer1.drawGridAttack()
-                    windowPlayer1.drawBtn()
-                    window.renderSurface(windowPlayer1.surface)
-
+            else:
+                action = current_surface.handle_click(mouse_pos)
+                
+                if action == "continue":
+                    if current_surface == surfacePlayer1:
+                        surfacePlayer1.setup_player("Player 1")
+                        current_surface = surfacePlayer2
+                    elif current_surface == surfacePlayer2:
+                        surfacePlayer2.setup_player("Player 2")
+                        
+                        # Set up opponents
+                        surfacePlayer1.setup_opponent(surfacePlayer2.player)
+                        surfacePlayer2.setup_opponent(surfacePlayer1.player)
+                        
+                        # Switch to playing mode
+                        surfacePlayer1.switch_to_playing()
+                        surfacePlayer2.switch_to_playing()
+                        
+                        current_surface = surfacePlayer1
+                        game_started = True
+                
+                elif action == "reset":
+                    if current_surface == surfacePlayer1:
+                        surfacePlayer1 = GameSurface('Choose the position of your ships player 1', 800, 600)
+                        current_surface = surfacePlayer1
+                    elif current_surface == surfacePlayer2:
+                        surfacePlayer2 = GameSurface('Choose the position of your ships player 2', 800, 600)
+                        current_surface = surfacePlayer2
+                
+                elif action == "end_turn":
+                    if current_surface == surfacePlayer1:
+                        current_surface = surfacePlayer2
+                        surfacePlayer2.reset_shot_flag()
+                    else:
+                        current_surface = surfacePlayer1
+                        surfacePlayer1.reset_shot_flag()
 
     if current_surface is not None:
-        if isinstance(current_surface, Surface):
-            current_surface.handle_events(events)
-            current_surface.surface.fill((0, 128, 255))
-            current_surface.drawGrid()
-            current_surface.drawShips()
-            current_surface.drawBtn()
+        current_surface.handle_events(events)
+        current_surface.draw()
         window.renderSurface(current_surface.surface)
     else:
         window.drawBtns()

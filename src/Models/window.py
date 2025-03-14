@@ -1,44 +1,42 @@
 import pygame
 
-class Window: 
+class Window:
     def __init__(self, width, height, title):
         self.width = width
         self.height = height
         self.title = title
         self.window = pygame.display.set_mode((width, height))
         pygame.display.set_caption(title)
-        self.titleMenu = pygame.Rect(350,100,100,50)
-        self.btnPlay = pygame.Rect(350,300,100,50)
-        self.btnExit = pygame.Rect(350,355,100,50)
-        self.font = pygame.font.Font(None,36)
-
-    def updateWindow(self):
+        self.window.fill((0, 128, 255))
         
-        pygame.display.flip()
-    
-    def getWindow(self):
+        self.font = pygame.font.Font(None, 36)
         
-        return self.window
-
-    def renderSurface(self,surface):
-         self.window.blit(surface, (0,0))
-
+        self.btnPlay = pygame.Rect(350, 250, 100, 50)
+        self.btnExit = pygame.Rect(350, 350, 100, 50)
+        
     def drawBtns(self):
-
-        titleMenu = self.font.render("BATTLESHIP", True, (255, 255, 255))
-        rectTitleMenu = titleMenu.get_rect(center=self.titleMenu.center)
-
-        self.window.blit(titleMenu,rectTitleMenu)
+        self.window.fill((0, 128, 255))
         
-        pygame.draw.rect(self.window, (255, 0, 0), self.btnPlay) 
-        pygame.draw.rect(self.window, (0, 0, 255), self.btnExit)
+        title = self.font.render(self.title, True, (255, 255, 255))
+        title_rect = title.get_rect(center=(self.width // 2, 100))
+        self.window.blit(title, title_rect)
         
-        textPlay = self.font.render('PLAY', True, (255, 255, 255))
-        textExit = self.font.render('EXIT', True, (255, 255, 255))
+        pygame.draw.rect(self.window, (255, 0, 0), self.btnPlay)
+        pygame.draw.rect(self.window, (255, 0, 0), self.btnExit)
+        
+        play_text = self.font.render('Play', True, (255, 255, 255))
+        exit_text = self.font.render('Exit', True, (255, 255, 255))
+        
+        play_rect = play_text.get_rect(center=self.btnPlay.center)
+        exit_rect = exit_text.get_rect(center=self.btnExit.center)
+        
+        self.window.blit(play_text, play_rect)
+        self.window.blit(exit_text, exit_rect)
+        
+    def renderSurface(self, surface):
+        self.window.blit(surface, (0, 0))
+        
+    def updateWindow(self):
+        pygame.display.update()
 
-        rectPlay = textPlay.get_rect(center=self.btnPlay.center)
-        rectExit = textExit.get_rect(center=self.btnExit.center)
-        
-        self.window.blit(textPlay, rectPlay)
-        self.window.blit(textExit, rectExit)
 
