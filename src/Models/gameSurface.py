@@ -34,14 +34,18 @@ class GameSurface:
         
         # Buttons
         self.btnContinue = pygame.Rect(250, 545, 90, 50)
-        self.btnReset = pygame.Rect(490, 545, 60, 50)
+        self.btnReset = pygame.Rect(340, 400, 120, 50)
         self.btnEndTurn = pygame.Rect(350, 500, 90, 50)
         
         # Ships for setup
         self.ships = []
         if self.state == "setup":
             self.ships = [
-                Ship(2, 0, 0, True),
+                Ship(4, 0, 0, True),
+                Ship(3, 0, 2, True),
+                Ship(2, 0, 4, True),
+                Ship(2, 0, 6, True),
+                Ship(1, 0, 8, True)
             ]
         
         # Game objects
@@ -106,16 +110,13 @@ class GameSurface:
         
         # Draw buttons
         pygame.draw.rect(self.surface, (255, 0, 0), self.btnContinue)
-        pygame.draw.rect(self.surface, (255, 0, 0), self.btnReset)
         
         textContinue = self.font.render('Continue', True, (255, 255, 255))
-        textReset = self.font.render('Reset', True, (255, 255, 255))
+        
         
         rectContinue = textContinue.get_rect(center=self.btnContinue.center)
-        rectReset = textReset.get_rect(center=self.btnReset.center)
         
         self.surface.blit(textContinue, rectContinue)
-        self.surface.blit(textReset, rectReset)
         
         # Instructions
         textRotate = self.font.render('Press SPACE while dragging to rotate', True, (255, 255, 255))
@@ -195,6 +196,11 @@ class GameSurface:
         title_rect = title.get_rect(center=(self.width // 2, 25))
         self.surface.blit(title, title_rect)
         
+        textReset = self.font.render('RESET GAME', True, (255, 255, 255))
+        rectReset = textReset.get_rect(center=self.btnReset.center)
+        pygame.draw.rect(self.surface, (255, 0, 0), self.btnReset)
+        self.surface.blit(textReset, rectReset)
+        
         game_over_text = self.font.render(f"{self.winner} WINS!", True, (255, 255, 0))
         message_win = game_over_text.get_rect(center=(self.width // 2, 300))
         self.surface.blit(game_over_text, message_win)
@@ -209,8 +215,6 @@ class GameSurface:
         if self.state == "setup":
             if self.btnContinue.collidepoint(mouse_pos):
                 return "continue"
-            elif self.btnReset.collidepoint(mouse_pos):
-                return "reset"
         else:  # playing state
             if self.btnEndTurn.collidepoint(mouse_pos):
                 if self.shot_made or self.game_over:
