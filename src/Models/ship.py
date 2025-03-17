@@ -56,10 +56,6 @@ class Ship:
         if other_ships is None:
             other_ships = []
         
-        original_x, original_y = self.x, self.y
-        original_horizontal = self.isHorizontal
-        original_positions = self.position.copy()
-        
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             mouse_x, mouse_y = event.pos
             
@@ -100,9 +96,6 @@ class Ship:
                 self.update_positions()
                 
                 if other_ships and self.check_collision(other_ships):
-                    self.x, self.y = original_x, original_y
-                    self.isHorizontal = original_horizontal
-                    self.position = original_positions
                     self.is_colliding = True
                 else:
                     self.is_colliding = False
@@ -126,16 +119,11 @@ class Ship:
                 self.is_colliding = self.check_collision(other_ships)
         
         elif event.type == pygame.KEYDOWN and self.dragging and event.key == pygame.K_SPACE:
-            
-            original_horizontal = self.isHorizontal
-            original_x, original_y = self.x, self.y
         
             self.rotate(gridSize)
             self.update_positions()
             
             if other_ships and self.check_collision(other_ships):
-                self.isHorizontal = original_horizontal
-                self.x, self.y = original_x, original_y
                 self.update_positions()
                 self.is_colliding = True
             else:
