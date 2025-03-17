@@ -59,19 +59,17 @@ class GameSurface:
         self.shot_made = False
         self.game_over = False
         self.winner = None
-        
-        # Nuevo: mensaje de colisión
+    
         self.collision_message = ""
         self.message_timer = 0
     
     def setup_player(self, name):
-        # Verificar colisiones antes de configurar el jugador
         if self.has_ship_collisions():
             return False
             
         self.player = Player(name)
         for ship in self.ships:
-            ship.update_positions()  # Asegurar que las posiciones estén actualizadas
+            ship.update_positions()
             game_ship = Ship(
                 ship.length,
                 ship.x,
@@ -89,7 +87,6 @@ class GameSurface:
     def switch_to_playing(self):
         self.state = "playing"
     
-    # Nuevo método para verificar colisiones entre barcos
     def has_ship_collisions(self):
         for i, ship1 in enumerate(self.ships):
             for ship2 in self.ships[i+1:]:
@@ -112,7 +109,6 @@ class GameSurface:
         else:
             self.draw_playing()
         
-        # Mostrar mensaje de colisión si existe
         if self.collision_message and pygame.time.get_ticks() < self.message_timer:
             message = self.font.render(self.collision_message, True, (255, 255, 0))
             self.surface.blit(message, (self.width // 2 - message.get_width() // 2, 500))
@@ -125,15 +121,14 @@ class GameSurface:
                 y = self.offset_y + row * self.cellSz
                 rect = pygame.Rect(x, y, self.cellSz, self.cellSz)
                 pygame.draw.rect(self.surface, (0, 0, 0), rect, 1)
-        
-        # Verificar colisiones entre barcos
+    
         has_collisions = self.has_ship_collisions()
         
         # Draw ships
         for ship in self.ships:
             ship.draw(self.surface, self.offset_x, self.offset_y, self.cellSz)
         
-        # Draw buttons - color diferente si hay colisiones
+        # Draw buttons
         button_color = (100, 100, 100) if has_collisions else (255, 0, 0)
         pygame.draw.rect(self.surface, button_color, self.btnContinue)
         
