@@ -42,21 +42,20 @@ def game():
                     
                     if action == "continue":
                         if current_surface == surfacePlayer1:
-                            surfacePlayer1.setup_player("Player 1")
-                            current_surface = surfacePlayer2
+                            if current_surface.setup_player("Player 1"):
+                                current_surface = surfacePlayer2
                         elif current_surface == surfacePlayer2:
-                            surfacePlayer2.setup_player("Player 2")
-                            
-                            # Set up opponents
-                            surfacePlayer1.setup_opponent(surfacePlayer2.player)
-                            surfacePlayer2.setup_opponent(surfacePlayer1.player)
-                            
-                            # Switch to playing mode
-                            surfacePlayer1.switch_to_playing()
-                            surfacePlayer2.switch_to_playing()
-                            
-                            current_surface = surfacePlayer1
-                            game_started = True
+                            if current_surface.setup_player("Player 2"):
+                                # Set up opponents
+                                surfacePlayer1.setup_opponent(surfacePlayer2.player)
+                                surfacePlayer2.setup_opponent(surfacePlayer1.player)
+                                
+                                # Switch to playing mode
+                                surfacePlayer1.switch_to_playing()
+                                surfacePlayer2.switch_to_playing()
+                                
+                                current_surface = surfacePlayer1
+                                game_started = True
                     
                     elif action == "end_turn" and current_surface.game_over == False:
                         if current_surface == surfacePlayer1:

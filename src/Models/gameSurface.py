@@ -59,11 +59,19 @@ class GameSurface:
         self.shot_made = False
         self.game_over = False
         self.winner = None
+        
+        # Nuevo: mensaje de colisión
+        self.collision_message = ""
+        self.message_timer = 0
     
     def setup_player(self, name):
+        # Verificar colisiones antes de configurar el jugador
+        if self.has_ship_collisions():
+            return False
+            
         self.player = Player(name)
         for ship in self.ships:
-            ship.update_positions()  # Ensure positions are up to date
+            ship.update_positions()  # Asegurar que las posiciones estén actualizadas
             game_ship = Ship(
                 ship.length,
                 ship.x,
@@ -72,6 +80,7 @@ class GameSurface:
                 f"Ship{ship.length}"
             )
             self.player.add_ship(game_ship)
+        return True
     
     def setup_opponent(self, opponent):
         self.opponent = opponent
@@ -79,6 +88,14 @@ class GameSurface:
     
     def switch_to_playing(self):
         self.state = "playing"
+    
+    # Nuevo método para verificar colisiones entre barcos
+    def has_ship_collisions(self):
+        for i, ship1 in enumerate(self.ships):
+            for ship2 in self.ships[i+1:]:
+                if ship1.check_collision([ship2]):
+                    return True
+        return False
     
     def draw(self):
         self.surface.fill((0, 128, 255))
@@ -94,6 +111,11 @@ class GameSurface:
             self.draw_setup()
         else:
             self.draw_playing()
+        
+        # Mostrar mensaje de colisión si existe
+        if self.collision_message and pygame.time.get_ticks() < self.message_timer:
+            message = self.font.render(self.collision_message, True, (255, 255, 0))
+            self.surface.blit(message, (self.width // 2 - message.get_width() // 2, 500))
     
     def draw_setup(self):
         # Draw grid
@@ -104,23 +126,28 @@ class GameSurface:
                 rect = pygame.Rect(x, y, self.cellSz, self.cellSz)
                 pygame.draw.rect(self.surface, (0, 0, 0), rect, 1)
         
+        # Verificar colisiones entre barcos
+        has_collisions = self.has_ship_collisions()
+        
         # Draw ships
         for ship in self.ships:
             ship.draw(self.surface, self.offset_x, self.offset_y, self.cellSz)
         
-        # Draw buttons
-        pygame.draw.rect(self.surface, (255, 0, 0), self.btnContinue)
+        # Draw buttons - color diferente si hay colisiones
+        button_color = (100, 100, 100) if has_collisions else (255, 0, 0)
+        pygame.draw.rect(self.surface, button_color, self.btnContinue)
         
         textContinue = self.font.render('Continue', True, (255, 255, 255))
-        
-        
         rectContinue = textContinue.get_rect(center=self.btnContinue.center)
-        
         self.surface.blit(textContinue, rectContinue)
         
         # Instructions
         textRotate = self.font.render('Press SPACE while dragging to rotate', True, (255, 255, 255))
         self.surface.blit(textRotate, (self.offset_x, self.offset_y + self.gridSz * self.cellSz + 10))
+        
+        if has_collisions:
+            warning = self.font.render('The ships are overlapped! Reposition them.', True, (255, 255, 0))
+            self.surface.blit(warning, (self.offset_x, self.offset_y + self.gridSz * self.cellSz + 40))
     
     def draw_playing(self):
         # Draw position grid
@@ -209,12 +236,16 @@ class GameSurface:
         if self.state == "setup":
             for event in events:
                 for ship in self.ships:
-                    ship.handle_event(event, self.offset_x, self.offset_y, self.cellSz, self.gridSz)
+                    ship.handle_event(event, self.offset_x, self.offset_y, self.cellSz, self.gridSz, self.ships)
     
     def handle_click(self, mouse_pos):
         if self.state == "setup":
             if self.btnContinue.collidepoint(mouse_pos):
-                return "continue"
+                if not self.has_ship_collisions():
+                    return "continue"
+                else:
+                    self.collision_message = "You cannot continue with overlapping ships!"
+                    self.message_timer = pygame.time.get_ticks() + 3000 
         else:  # playing state
             if self.btnEndTurn.collidepoint(mouse_pos):
                 if self.shot_made or self.game_over:
@@ -263,4 +294,3 @@ class GameSurface:
     
     def reset_shot_flag(self):
         self.shot_made = False
-
