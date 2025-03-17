@@ -15,6 +15,12 @@ class Ship:
         self.offset_x = 0
         self.offset_y = 0
         self.is_colliding = False
+
+        # initial Positions for collide check
+
+        self.initial_x = x
+        self.initial_y = y
+        self.initial_isHorizontal = isHorizontal
     
     def _calculate_positions(self):
         positions = []
@@ -78,6 +84,9 @@ class Ship:
                 self.dragging = True
                 self.offset_x = self.x * cellSize - (mouse_x - offset_x)
                 self.offset_y = self.y * cellSize - (mouse_y - offset_y)
+                self.initial_x = self.x #save initial position
+                self.initial_y = self.y
+                self.initial_isHorizontal = self.isHorizontal
 
         elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
             if self.dragging:
@@ -97,6 +106,10 @@ class Ship:
                 
                 if other_ships and self.check_collision(other_ships):
                     self.is_colliding = True
+                    self.x = self.initial_x #if collide, set positions to initial positions before drag the ship
+                    self.y = self.initial_y
+                    self.isHorizontal = self.initial_isHorizontal
+                    self.update_positions()
                 else:
                     self.is_colliding = False
 
