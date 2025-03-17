@@ -34,6 +34,7 @@ class Ship:
     
     def update_positions(self):
         self.position = self._calculate_positions()
+        self.is_colliding = False
     
     def check_sunken_ship(self):
         return self.life == 0
