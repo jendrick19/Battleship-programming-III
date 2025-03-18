@@ -9,13 +9,20 @@ class Window:
         pygame.display.set_caption(title)
         self.window.fill((0, 128, 255))
         
-        self.font = pygame.font.Font(None, 36)
         
+        self.font = pygame.font.Font(None, 100)
+        self.font_button= pygame.font.Font(None, 36)
+        self.back=pygame.image.load("6292.jpg")
+        self.back = pygame.transform.scale(self.back, (self.width, self.height))
         self.btnPlay = pygame.Rect(350, 250, 100, 50)
         self.btnExit = pygame.Rect(350, 350, 100, 50)
         
+        
+        
     def drawBtns(self):
-        self.window.fill((0, 128, 255))
+        self.window.fill((3, 37, 108))
+        self.window.blit(self.back, (0,0))
+        
         
         title = self.font.render(self.title, True, (255, 255, 255))
         title_rect = title.get_rect(center=(self.width // 2, 100))
@@ -24,8 +31,8 @@ class Window:
         pygame.draw.rect(self.window, (255, 0, 0), self.btnPlay)
         pygame.draw.rect(self.window, (255, 0, 0), self.btnExit)
         
-        play_text = self.font.render('Play', True, (255, 255, 255))
-        exit_text = self.font.render('Exit', True, (255, 255, 255))
+        play_text = self.font_button.render('Play', True, (255, 255, 255))
+        exit_text = self.font_button.render('Exit', True, (255, 255, 255))
         
         play_rect = play_text.get_rect(center=self.btnPlay.center)
         exit_rect = exit_text.get_rect(center=self.btnExit.center)

@@ -168,7 +168,7 @@ class Ship:
             self.y = max(0, min(gridSize - self.length, newY))
 
     def draw(self, surface, offset_x, offset_y, cellSize):
-
+        
         color = (255, 0, 0) if self.is_colliding else (0, 0, 0)
         
         if self.isHorizontal:

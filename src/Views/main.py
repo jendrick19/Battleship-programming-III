@@ -11,8 +11,8 @@ def game():
     window = Window(800, 600, 'BATTLESHIP')
     window.drawBtns()
 
-    surfacePlayer1 = GameSurface('Choose the position of your ships player 1', 800, 600)
-    surfacePlayer2 = GameSurface('Choose the position of your ships player 2', 800, 600)
+    surfacePlayer1 = GameSurface('Choose the position of your ships player 1', 800, 600, (119, 255, 148))
+    surfacePlayer2 = GameSurface('Choose the position of your ships player 2', 800, 600, (255, 163, 175))
 
     execute = True
     current_surface = None

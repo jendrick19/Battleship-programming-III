@@ -5,18 +5,21 @@ from src.Game.gameLogic import GameLogic
 from src.Models.ship import Ship
 
 class GameSurface:
-    def __init__(self, title, width, height):
+    def __init__(self, title, width, height, colorT):
         pygame.font.init()
         self.width = width
         self.height = height
         self.title = title
         self.surface = pygame.Surface((width, height))
-        self.surface.fill((0, 128, 255))
-        
+        self.surface.fill((3, 37, 108))
+        self.colorT=colorT
         self.gridSz = 10
         self.cellSz = 30
         self.offset_x = 250
         self.offset_y = 100
+        self.backSur= pygame.image.load("6292.jpg")
+        self.backSur = pygame.transform.scale(self.backSur, (self.width, self.height))
+        self.font_tittle= pygame.font.Font(None, 36)
         
         # For playing phase
         self.offset_x1, self.offset_y1 = 50, 100  # Position grid
@@ -33,9 +36,9 @@ class GameSurface:
             self.player_number = 2
         
         # Buttons
-        self.btnContinue = pygame.Rect(250, 545, 90, 50)
+        self.btnContinue = pygame.Rect((self.width - 90) // 2, 500, 90, 50)
         self.btnReset = pygame.Rect(340, 400, 120, 50)
-        self.btnEndTurn = pygame.Rect(350, 500, 90, 50)
+        self.btnEndTurn = pygame.Rect((self.width - 90) // 2, 500, 90, 50)
         
         # Ships for setup
         self.ships = []
@@ -95,11 +98,12 @@ class GameSurface:
         return False
     
     def draw(self):
-        self.surface.fill((0, 128, 255))
+        self.surface.fill((3, 37, 108))
+        self.surface.blit(self.backSur,(0,0))
         
         # Draw title
-        title = self.font.render(self.title, True, (255, 255, 255))
-        title_rect = title.get_rect(center=(self.width // 2, 25))
+        title = self.font_tittle.render(self.title, True, self.colorT )
+        title_rect = title.get_rect(center=(self.width // 2, 45))
         self.surface.blit(title, title_rect)
         
         if self.game_over:
@@ -120,7 +124,7 @@ class GameSurface:
                 x = self.offset_x + col * self.cellSz
                 y = self.offset_y + row * self.cellSz
                 rect = pygame.Rect(x, y, self.cellSz, self.cellSz)
-                pygame.draw.rect(self.surface, (0, 0, 0), rect, 1)
+                pygame.draw.rect(self.surface, (6, 190, 225), rect, 2)
     
         has_collisions = self.has_ship_collisions()
         
@@ -146,30 +150,30 @@ class GameSurface:
     
     def draw_playing(self):
         # Draw position grid
-        titlePosit = self.font.render('POSITIONS', True, (0, 0, 0))
-        self.surface.blit(titlePosit, (self.offset_x1 + 110, self.offset_y1 - 40))
+        titlePosit = self.font.render('POSITIONS', True, (255, 255, 255))
+        self.surface.blit(titlePosit, (self.offset_x1 + 110, self.offset_y1 - 30))
         
         for row in range(self.gridSz):
             for col in range(self.gridSz):
                 x = self.offset_x1 + col * self.cellSz
                 y = self.offset_y1 + row * self.cellSz
                 rect = pygame.Rect(x, y, self.cellSz, self.cellSz)
-                pygame.draw.rect(self.surface, (0, 0, 0), rect, 1)
+                pygame.draw.rect(self.surface, (6, 190, 225), rect, 2)
                 
                 # Draw ships
                 if self.player and (row, col) in [pos for ship in self.player.ships for pos in ship.position]:
                     pygame.draw.rect(self.surface, (0, 0, 0), rect)
         
         # Draw attack grid
-        titleAttck = self.font.render('ATTACK', True, (0, 0, 0))
-        self.surface.blit(titleAttck, (self.offset_x2 + 120, self.offset_y2 - 40))
+        titleAttck = self.font.render('ATTACK', True, (255, 255, 255))
+        self.surface.blit(titleAttck, (self.offset_x2 + 120, self.offset_y2 - 30))
         
         for row in range(self.gridSz):
             for col in range(self.gridSz):
                 x = self.offset_x2 + col * self.cellSz
                 y = self.offset_y2 + row * self.cellSz
                 rect = pygame.Rect(x, y, self.cellSz, self.cellSz)
-                pygame.draw.rect(self.surface, (0, 0, 0), rect, 1)
+                pygame.draw.rect(self.surface, (6, 190, 225), rect, 2)
                 
                 # Draw hits (red X)
                 if (row, col) in self.hits:
@@ -213,10 +217,7 @@ class GameSurface:
                 self.surface.blit(turn_status, (340, 450))
    
     def draw_game_over(self):
-        self.title = "Game over"
-        title = self.font.render(self.title, True, (255, 255, 255))
-        title_rect = title.get_rect(center=(self.width // 2, 25))
-        self.surface.blit(title, title_rect)
+        self.title = "GAME OVER"
         
         textReset = self.font.render('RESET GAME', True, (255, 255, 255))
         rectReset = textReset.get_rect(center=self.btnReset.center)
