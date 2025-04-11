@@ -9,6 +9,7 @@ class Ship:
         self.isHorizontal = isHorizontal
         self.name = name or f"Ship{length}"
         self.position = self._calculate_positions()
+        self.damage_positions = [False] * self.length
         
         # UI properties
         self.dragging = False
