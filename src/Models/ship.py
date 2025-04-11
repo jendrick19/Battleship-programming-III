@@ -51,31 +51,48 @@ class Ship:
             return False 
 
         if direction == 'left' and self.isHorizontal:
-            if self.damage_positions[0]: return False 
+            if self.damage_positions[0]:
+                return False 
             new_x = self.x - 1
-            if new_x < 0: return False
+            
+            if new_x < 0: 
+                return False
             new_pos = [(y, x - 1) for y, x in self.position]
+        
         elif direction == 'right' and self.isHorizontal:
-            if self.damage_positions[-1]: return False  
+            if self.damage_positions[-1]: 
+                return False  
             new_x = self.x + 1
-            if new_x + self.length > board: return False
+            if new_x + self.length > board: 
+                return False
             new_pos = [(y, x + 1) for y, x in self.position]
+        
         elif direction == 'up' and not self.isHorizontal:
-            if self.damage_positions[0]: return False
+            
+            if self.damage_positions[0]:
+                return False
             new_y = self.y - 1
-            if new_y < 0: return False
+            
+            if new_y < 0:
+                return False
             new_pos = [(y - 1, x) for y, x in self.position]
+        
         elif direction == 'down' and not self.isHorizontal:
-            if self.damage_positions[-1]: return False
+            
+            if self.damage_positions[-1]:
+                return False
             new_y = self.y + 1
-            if new_y + self.length > board: return False
+            
+            if new_y + self.length > board:
+                return False
             new_pos = [(y + 1, x) for y, x in self.position]
+        
         else:
             return False
         
-        for other in other_ships:
-            if other == self: continue
-            if set(new_pos).intersection(set(other.position)):
+        for ship in other_ships:
+            if ship == self: continue
+            if set(new_pos).intersection(set(ship.position)):
                 return False
 
         return True
