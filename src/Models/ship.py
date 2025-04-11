@@ -39,9 +39,58 @@ class Ship:
     def check_sunken_ship(self):
         return self.life == 0
     
-    def damage_received_ship(self):
-        if self.life > 0:
-            self.life -= 1
+    def damage_received_ship(self,x,y):
+        for idx, pos in enumerate(self.position):
+            if pos[0] == x and pos[1] == y:
+                self.damage_positions[idx] = True
+                self.life -= 1
+                break
+    
+    def can_move(self, direction, board, other_ships):
+        if self.check_sunken_ship():
+            return False 
+
+        if direction == 'left' and self.isHorizontal:
+            if self.damage_positions[0]: return False 
+            new_x = self.x - 1
+            if new_x < 0: return False
+            new_pos = [(y, x - 1) for y, x in self.position]
+        elif direction == 'right' and self.isHorizontal:
+            if self.damage_positions[-1]: return False  
+            new_x = self.x + 1
+            if new_x + self.length > board: return False
+            new_pos = [(y, x + 1) for y, x in self.position]
+        elif direction == 'up' and not self.isHorizontal:
+            if self.damage_positions[0]: return False
+            new_y = self.y - 1
+            if new_y < 0: return False
+            new_pos = [(y - 1, x) for y, x in self.position]
+        elif direction == 'down' and not self.isHorizontal:
+            if self.damage_positions[-1]: return False
+            new_y = self.y + 1
+            if new_y + self.length > board: return False
+            new_pos = [(y + 1, x) for y, x in self.position]
+        else:
+            return False
+        
+        for other in other_ships:
+            if other == self: continue
+            if set(new_pos).intersection(set(other.position)):
+                return False
+
+        return True
+    
+    def move(self, direction):
+        if direction == 'left':
+            self.x -= 1
+        elif direction == 'right':
+            self.x += 1
+        elif direction == 'up':
+            self.y -= 1
+        elif direction == 'down':
+            self.y += 1
+        self.update_positions()
+    
     
     def check_collision(self, other_ships):
 
