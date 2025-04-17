@@ -23,7 +23,7 @@ class Player:
             
             for ship in opponent.ships:
                 if (row, col) in ship.position:
-                    ship.damage_received_ship()
+                    ship.damage_received_ship(row,col)
                     break
         else:
             opponent.board.grid[row][col] = 'o'
