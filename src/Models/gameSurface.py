@@ -22,6 +22,7 @@ class GameSurface:
         self.font_tittle= pygame.font.Font(None, 36)
         self.show_confirmation = False
 
+
         # For playing phase
         self.offset_x1, self.offset_y1 = 50, 100  # Position grid
         self.offset_x2, self.offset_y2 = 450, 100  # Attack grid
@@ -49,6 +50,19 @@ class GameSurface:
         self.btnMoveLeft = pygame.Rect(60, 500, 40, 40)
         self.btnMoveRight = pygame.Rect(140, 500, 40, 40)
         
+        # Boton para disparar
+        self.btncoords = pygame.Rect(580, 450, 160, 40)
+        self.active = False
+        
+        self.input_text = ""
+        self.colorI = (0,0,0)
+        self.colorA = (0, 255, 0)
+        
+        self.error_message = "" 
+
+        
+        
+
         # Estado para selección de barco
         self.selected_ship = None
         self.ship_selection_active = False
@@ -136,8 +150,48 @@ class GameSurface:
             message = self.font.render(self.collision_message, True, (255, 255, 0))
             self.surface.blit(message, (self.width // 2 - message.get_width() // 2, 500))
 
+    def draw_coordinates_button(self):
+        # dibujar formato de las coordenadas
+        format_text = self.font.render("Format: A1 or B5", True, (255, 255, 255))
+        self.surface.blit(format_text, (self.btncoords.x + 5, self.btncoords.y - 20))
+        # dibujar el limite de las coordenadas
+        limit_text = self.font.render("Limit: A1 to J10", True, (255, 255, 255))
+        self.surface.blit(limit_text, (self.btncoords.x + 5, self.btncoords.y + 50))
+
+        self.color = self.colorA if self.active else self.colorI # Cambiado a verde si el botón está activo
+       
+        # Dibuja el botón de las coordenadas
+        pygame.draw.rect(self.surface, self.color, self.btncoords, 2)
+        button_text = self.input_text if self.active else "Enter coordinates"
+        text_surface = self.font.render(button_text, True, (255, 255, 255))
+        text_rect = text_surface.get_rect(center=self.btncoords.center)
+        self.surface.blit(text_surface, text_rect)
+            
+    def handle_attack_input(self, input_text):
+        self.error_message = ""
+        # Validate the input (e.g., "A1", "B5")
+        if len(input_text) < 2 or not input_text[0].isalpha() or not input_text[1:].isdigit():
+            self.error_message = "Invalid coordinate format!"
+            self.active = False
+            return self.error_message
+
+        # Convert the input to grid coordinates
+        row = ord(input_text[0].upper()) - ord('A')  # Convert letter to row index
+        col = int(input_text[1:]) - 1  # Convert number to column index
+
+        # Check if the coordinates are within the grid
+        if 0 <= row < self.gridSz and 0 <= col < self.gridSz:
+            self.handle_attack(None, row, col)  # Call the existing attack logic
+            self.action_taken = True
+            self.active = False
+        else:
+            self.error_message = "Coordinates out of bounds!"
+            self.active = False
+            return self.error_message
+        
+
     def draw_confirmation_dialog(self):
-       # Fondo del cuadro
+       # Fondo del cuadroscreen
         pygame.draw.rect(self.surface, (0, 0, 0), (200, 200, 400, 200))
         pygame.draw.rect(self.surface, (255, 255, 255), (200, 200, 400, 200), 2)
 
@@ -266,6 +320,9 @@ class GameSurface:
         rectEndTurn = textEndTurn.get_rect(center=self.btnEndTurn.center)
         self.surface.blit(textEndTurn, rectEndTurn)
 
+        # Dibujar botón de coordenadas
+        self.draw_coordinates_button()
+
         # Dibujar botones de movimiento si hay un barco seleccionado y no se ha realizado una acción
         if self.selected_ship and not self.action_taken:
             # Botón arriba
@@ -306,6 +363,16 @@ class GameSurface:
                 else:
                     turn_status = self.font.render("Ship moved! Click End Turn", True, (255, 255, 0))
                 self.surface.blit(turn_status, (300, 450))
+
+            elif not self.action_taken and self.error_message == "Invalid coordinate format!":
+                turn_status = self.font.render("Invalid coordinate format!", True, (255, 0, 0))
+                self.surface.blit(turn_status, (300, 450))
+
+            elif not self.action_taken and self.error_message == "Coordinates out of bounds!":
+                turn_status = self.font.render("Coordinates out of bounds!", True, (255, 0, 0))
+                self.surface.blit(turn_status, (300, 450))
+
+        
             else:
                 turn_status = self.font.render("Move a ship or Make a shot", True, (255, 255, 255))
                 self.surface.blit(turn_status, (300, 450))
@@ -327,7 +394,23 @@ class GameSurface:
             for event in events:
                 for ship in self.ships:
                     ship.handle_event(event, self.offset_x, self.offset_y, self.cellSz, self.gridSz, self.ships)
-
+        if self.state == "playing":
+            for event in events:   
+                mouse_pos = pygame.mouse.get_pos()    
+                if not self.action_taken:
+                    if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                        if self.btncoords.collidepoint(mouse_pos):
+                            self.active = True
+                        else:
+                            self.active = False
+                    if event.type == pygame.KEYDOWN and self.active:
+                        if event.key == pygame.K_RETURN:
+                            self.handle_attack_input(self.input_text)
+                            self.input_text = ""
+                        elif event.key == pygame.K_BACKSPACE:
+                            self.input_text = self.input_text[:-1]
+                        else:
+                            self.input_text += event.unicode
     def handle_click(self, mouse_pos):
         if self.show_confirmation:
             if self.btnConfirmYes.collidepoint(mouse_pos):
@@ -341,6 +424,8 @@ class GameSurface:
                 if not self.has_ship_collisions():
                     self.show_confirmation = True
         elif self.state == "playing":
+
+
             # Si ya se realizó una acción, solo permitir finalizar el turno
             if self.action_taken:
                 if self.btnEndTurn.collidepoint(mouse_pos):
