@@ -9,7 +9,7 @@ class Ship:
         self.isHorizontal = isHorizontal
         self.name = name or f"Ship{length}"
         self.position = self._calculate_positions()
-        self.damage_positions = [False] * self.length
+        self.damage_positions = [False] * self.length  # Indica qué segmentos del barco están dañados
         
         # UI properties
         self.dragging = False
@@ -18,7 +18,6 @@ class Ship:
         self.is_colliding = False
 
         # initial Positions for collide check
-
         self.initial_x = x
         self.initial_y = y
         self.initial_isHorizontal = isHorizontal
@@ -40,7 +39,7 @@ class Ship:
     def check_sunken_ship(self):
         return self.life == 0
     
-    def damage_received_ship(self,x,y):
+    def damage_received_ship(self, x, y):
         for idx, pos in enumerate(self.position):
             if pos[0] == x and pos[1] == y:
                 self.damage_positions[idx] = True
@@ -51,6 +50,7 @@ class Ship:
         if self.check_sunken_ship():
             return False 
 
+        # Calcular nuevas posiciones según la dirección
         if direction == 'left' and self.isHorizontal:
             if self.damage_positions[0]:
                 return False 
@@ -69,7 +69,6 @@ class Ship:
             new_pos = [(y, x + 1) for y, x in self.position]
         
         elif direction == 'up' and not self.isHorizontal:
-            
             if self.damage_positions[0]:
                 return False
             new_y = self.y - 1
@@ -79,7 +78,6 @@ class Ship:
             new_pos = [(y - 1, x) for y, x in self.position]
         
         elif direction == 'down' and not self.isHorizontal:
-            
             if self.damage_positions[-1]:
                 return False
             new_y = self.y + 1
@@ -91,6 +89,7 @@ class Ship:
         else:
             return False
         
+        # Verificar colisiones con otros barcos
         for ship in other_ships:
             if ship == self: continue
             if set(new_pos).intersection(set(ship.position)):
@@ -109,13 +108,10 @@ class Ship:
             self.y += 1
         self.update_positions()
     
-    
     def check_collision(self, other_ships):
-
         my_positions = set(self.position)
         
         for other_ship in other_ships:
-          
             if self == other_ship:
                 continue
 
@@ -235,7 +231,6 @@ class Ship:
             self.y = max(0, min(gridSize - self.length, newY))
 
     def draw(self, surface, offset_x, offset_y, cellSize):
-        
         color = (255, 0, 0) if self.is_colliding else (0, 0, 0)
         
         if self.isHorizontal:
@@ -243,10 +238,16 @@ class Ship:
                 x = offset_x + (self.x + i) * cellSize
                 y = offset_y + self.y * cellSize
                 rect = pygame.Rect(x, y, cellSize, cellSize)
-                pygame.draw.rect(surface, color, rect)
+                
+                # Dibujar el segmento del barco
+                segment_color = (255, 0, 0) if self.damage_positions[i] else color
+                pygame.draw.rect(surface, segment_color, rect)
         else:
             for i in range(self.length):
                 x = offset_x + self.x * cellSize
                 y = offset_y + (self.y + i) * cellSize
                 rect = pygame.Rect(x, y, cellSize, cellSize)
-                pygame.draw.rect(surface, color, rect)
+                
+                # Dibujar el segmento del barco
+                segment_color = (255, 0, 0) if self.damage_positions[i] else color
+                pygame.draw.rect(surface, segment_color, rect)

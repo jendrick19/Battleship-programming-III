@@ -1,7 +1,6 @@
 import socket
 import json
 
-
 class Conexion:
     def __init__(self, modo_servidor: bool, ip: str = "0.0.0.0", puerto: int = 5000):
         self.modo_servidor = modo_servidor
