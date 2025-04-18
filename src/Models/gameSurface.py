@@ -22,6 +22,7 @@ class GameSurface:
         self.font_tittle= pygame.font.Font(None, 36)
         self.show_confirmation = False
 
+
         # For playing phase
         self.offset_x1, self.offset_y1 = 50, 100  # Position grid
         self.offset_x2, self.offset_y2 = 450, 100  # Attack grid
@@ -40,8 +41,37 @@ class GameSurface:
         self.btnContinue = pygame.Rect((self.width - 90) // 2, 500, 90, 50)
         self.btnReset = pygame.Rect(340, 400, 120, 50)
         self.btnEndTurn = pygame.Rect((self.width - 90) // 2, 500, 90, 50)
-        self.btnConfirmYes = pygame.Rect((self.width - 200) // 2 - 40, 300, 80, 40)
-        self.btnConfirmNo = pygame.Rect((self.width - 200) // 2 + 100, 300, 80, 40)
+        self.btnConfirmYes = pygame.Rect(300 ,300, 80, 40)
+        self.btnConfirmNo = pygame.Rect(410, 300, 80, 40)
+        
+        # Botones para mover barcos
+        self.btnMoveUp = pygame.Rect(100, 450, 40, 40)
+        self.btnMoveDown = pygame.Rect(100, 550, 40, 40)
+        self.btnMoveLeft = pygame.Rect(60, 500, 40, 40)
+        self.btnMoveRight = pygame.Rect(140, 500, 40, 40)
+        
+        # Boton para disparar
+        self.btncoords = pygame.Rect(580, 450, 160, 40)
+        self.active = False
+        
+        self.input_text = ""
+        self.colorI = (0,0,0)
+        self.colorA = (0, 255, 0)
+        
+        self.error_message = "" 
+
+        
+        
+
+        # Estado para selección de barco
+        self.selected_ship = None
+        self.ship_selection_active = False
+        
+        # Control de acciones por turno
+        self.action_taken = False  # Indica si ya se realizó una acción (mover o disparar)
+        
+        # Rastreo de posiciones dañadas en el tablero
+        self.damaged_positions = set()  # Conjunto de posiciones (row, col) donde se ha dañado un barco
 
         # Ships for setup
         self.ships = []
@@ -120,8 +150,48 @@ class GameSurface:
             message = self.font.render(self.collision_message, True, (255, 255, 0))
             self.surface.blit(message, (self.width // 2 - message.get_width() // 2, 500))
 
+    def draw_coordinates_button(self):
+        # dibujar formato de las coordenadas
+        format_text = self.font.render("Format: A1 or B5", True, (255, 255, 255))
+        self.surface.blit(format_text, (self.btncoords.x + 5, self.btncoords.y - 20))
+        # dibujar el limite de las coordenadas
+        limit_text = self.font.render("Limit: A1 to J10", True, (255, 255, 255))
+        self.surface.blit(limit_text, (self.btncoords.x + 5, self.btncoords.y + 50))
+
+        self.color = self.colorA if self.active else self.colorI # Cambiado a verde si el botón está activo
+       
+        # Dibuja el botón de las coordenadas
+        pygame.draw.rect(self.surface, self.color, self.btncoords, 2)
+        button_text = self.input_text if self.active else "Enter coordinates"
+        text_surface = self.font.render(button_text, True, (255, 255, 255))
+        text_rect = text_surface.get_rect(center=self.btncoords.center)
+        self.surface.blit(text_surface, text_rect)
+            
+    def handle_attack_input(self, input_text):
+        self.error_message = ""
+        # Validate the input (e.g., "A1", "B5")
+        if len(input_text) < 2 or not input_text[0].isalpha() or not input_text[1:].isdigit():
+            self.error_message = "Invalid coordinate format!"
+            self.active = False
+            return self.error_message
+
+        # Convert the input to grid coordinates
+        row = ord(input_text[0].upper()) - ord('A')  # Convert letter to row index
+        col = int(input_text[1:]) - 1  # Convert number to column index
+
+        # Check if the coordinates are within the grid
+        if 0 <= row < self.gridSz and 0 <= col < self.gridSz:
+            self.handle_attack(None, row, col)  # Call the existing attack logic
+            self.action_taken = True
+            self.active = False
+        else:
+            self.error_message = "Coordinates out of bounds!"
+            self.active = False
+            return self.error_message
+        
+
     def draw_confirmation_dialog(self):
-       # Fondo del cuadro
+       # Fondo del cuadroscreen
         pygame.draw.rect(self.surface, (0, 0, 0), (200, 200, 400, 200))
         pygame.draw.rect(self.surface, (255, 255, 255), (200, 200, 400, 200), 2)
 
@@ -136,8 +206,8 @@ class GameSurface:
         yes_text = self.font.render("Sí", True, (255, 255, 255))
         no_text = self.font.render("No", True, (255, 255, 255))
 
-        self.surface.blit(yes_text, self.btnConfirmYes.move(25, 10))
-        self.surface.blit(no_text, self.btnConfirmNo.move(25, 10))
+        self.surface.blit(yes_text, self.btnConfirmYes.move(30, 12))
+        self.surface.blit(no_text, self.btnConfirmNo.move(30, 12))
 
     def draw_setup(self):
         # Draw grid
@@ -185,9 +255,33 @@ class GameSurface:
                 rect = pygame.Rect(x, y, self.cellSz, self.cellSz)
                 pygame.draw.rect(self.surface, (6, 190, 225), rect, 2)
 
-                # Draw ships
-                if self.player and (row, col) in [pos for ship in self.player.ships for pos in ship.position]:
-                    pygame.draw.rect(self.surface, (0, 0, 0), rect)
+                # Dibujar posiciones dañadas (donde había un barco pero se movió)
+                if (row, col) in self.damaged_positions and (row, col) not in [pos for ship in self.player.ships for pos in ship.position]:
+                    pygame.draw.circle(self.surface, (150, 150, 150),
+                                      (x + self.cellSz // 2, y + self.cellSz // 2),
+                                      self.cellSz // 3,
+                                      3)
+
+        # Dibujar barcos
+        for ship in self.player.ships:
+            is_selected = (ship == self.selected_ship)
+            
+            # Dibujar cada segmento del barco
+            for i, pos in enumerate(ship.position):
+                row, col = pos
+                x = self.offset_x1 + col * self.cellSz
+                y = self.offset_y1 + row * self.cellSz
+                rect = pygame.Rect(x, y, self.cellSz, self.cellSz)
+                
+                # Color según estado: dañado, seleccionado o normal
+                if ship.damage_positions[i]:
+                    color = (255, 0, 0)  # Rojo para partes dañadas
+                elif is_selected:
+                    color = (0, 255, 0)  # Verde para barco seleccionado
+                else:
+                    color = (0, 0, 0)    # Negro para barcos normales
+                    
+                pygame.draw.rect(self.surface, color, rect)
 
         # Draw attack grid
         titleAttck = self.font.render('ATTACK', True, (255, 255, 255))
@@ -219,12 +313,41 @@ class GameSurface:
                                         3)
 
         # Draw end turn button
-        button_color = (255, 0, 0) if self.shot_made else (100, 100, 100)
+        button_color = (255, 0, 0) if self.action_taken else (100, 100, 100)
         pygame.draw.rect(self.surface, button_color, self.btnEndTurn)
 
         textEndTurn = self.font.render('End Turn', True, (255, 255, 255))
         rectEndTurn = textEndTurn.get_rect(center=self.btnEndTurn.center)
         self.surface.blit(textEndTurn, rectEndTurn)
+
+        # Dibujar botón de coordenadas
+        self.draw_coordinates_button()
+
+        # Dibujar botones de movimiento si hay un barco seleccionado y no se ha realizado una acción
+        if self.selected_ship and not self.action_taken:
+            # Botón arriba
+            pygame.draw.rect(self.surface, (0, 150, 255), self.btnMoveUp)
+            pygame.draw.polygon(self.surface, (255, 255, 255), 
+                               [(100 + 20, 450 + 10), (100 + 10, 450 + 30), (100 + 30, 450 + 30)])
+            
+            # Botón abajo
+            pygame.draw.rect(self.surface, (0, 150, 255), self.btnMoveDown)
+            pygame.draw.polygon(self.surface, (255, 255, 255), 
+                               [(100 + 20, 550 + 30), (100 + 10, 550 + 10), (100 + 30, 550 + 10)])
+            
+            # Botón izquierda
+            pygame.draw.rect(self.surface, (0, 150, 255), self.btnMoveLeft)
+            pygame.draw.polygon(self.surface, (255, 255, 255), 
+                               [(60 + 10, 500 + 20), (60 + 30, 500 + 10), (60 + 30, 500 + 30)])
+            
+            # Botón derecha
+            pygame.draw.rect(self.surface, (0, 150, 255), self.btnMoveRight)
+            pygame.draw.polygon(self.surface, (255, 255, 255), 
+                               [(140 + 30, 500 + 20), (140 + 10, 500 + 10), (140 + 10, 500 + 30)])
+            
+            # Instrucciones para mover barcos
+            move_text = self.font.render("Move your selected ship", True, (255, 255, 255))
+            self.surface.blit(move_text, (10, 430))
 
         # Display game status
         if self.player and self.opponent:
@@ -234,12 +357,25 @@ class GameSurface:
             self.surface.blit(status_text, (600, 545))
 
             # Display turn status
-            if self.shot_made:
-                turn_status = self.font.render("Shot made! Click End Turn", True, (255, 255, 0))
+            if self.action_taken:
+                if self.shot_made:
+                    turn_status = self.font.render("Shot made! Click End Turn", True, (255, 255, 0))
+                else:
+                    turn_status = self.font.render("Ship moved! Click End Turn", True, (255, 255, 0))
                 self.surface.blit(turn_status, (300, 450))
+
+            elif not self.action_taken and self.error_message == "Invalid coordinate format!":
+                turn_status = self.font.render("Invalid coordinate format!", True, (255, 0, 0))
+                self.surface.blit(turn_status, (300, 450))
+
+            elif not self.action_taken and self.error_message == "Coordinates out of bounds!":
+                turn_status = self.font.render("Coordinates out of bounds!", True, (255, 0, 0))
+                self.surface.blit(turn_status, (300, 450))
+
+        
             else:
-                turn_status = self.font.render("Make your shot", True, (255, 255, 255))
-                self.surface.blit(turn_status, (340, 450))
+                turn_status = self.font.render("Move a ship or Make a shot", True, (255, 255, 255))
+                self.surface.blit(turn_status, (300, 450))
 
     def draw_game_over(self):
         self.title = "GAME OVER"
@@ -258,7 +394,23 @@ class GameSurface:
             for event in events:
                 for ship in self.ships:
                     ship.handle_event(event, self.offset_x, self.offset_y, self.cellSz, self.gridSz, self.ships)
-
+        if self.state == "playing":
+            for event in events:   
+                mouse_pos = pygame.mouse.get_pos()    
+                if not self.action_taken:
+                    if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                        if self.btncoords.collidepoint(mouse_pos):
+                            self.active = True
+                        else:
+                            self.active = False
+                    if event.type == pygame.KEYDOWN and self.active:
+                        if event.key == pygame.K_RETURN:
+                            self.handle_attack_input(self.input_text)
+                            self.input_text = ""
+                        elif event.key == pygame.K_BACKSPACE:
+                            self.input_text = self.input_text[:-1]
+                        else:
+                            self.input_text += event.unicode
     def handle_click(self, mouse_pos):
         if self.show_confirmation:
             if self.btnConfirmYes.collidepoint(mouse_pos):
@@ -272,6 +424,35 @@ class GameSurface:
                 if not self.has_ship_collisions():
                     self.show_confirmation = True
         elif self.state == "playing":
+
+
+            # Si ya se realizó una acción, solo permitir finalizar el turno
+            if self.action_taken:
+                if self.btnEndTurn.collidepoint(mouse_pos):
+                    return "end_turn"
+                return None
+                
+            # Verificar si se hizo clic en los botones de movimiento
+            if self.selected_ship:
+                if self.btnMoveUp.collidepoint(mouse_pos):
+                    return self.move_selected_ship('up')
+                elif self.btnMoveDown.collidepoint(mouse_pos):
+                    return self.move_selected_ship('down')
+                elif self.btnMoveLeft.collidepoint(mouse_pos):
+                    return self.move_selected_ship('left')
+                elif self.btnMoveRight.collidepoint(mouse_pos):
+                    return self.move_selected_ship('right')
+            
+            # Verificar si se hizo clic en el tablero de posiciones para seleccionar un barco
+            for row in range(self.gridSz):
+                for col in range(self.gridSz):
+                    x = self.offset_x1 + col * self.cellSz
+                    y = self.offset_y1 + row * self.cellSz
+                    position_rect = pygame.Rect(x, y, self.cellSz, self.cellSz)
+                    
+                    if position_rect.collidepoint(mouse_pos):
+                        return self.handle_ship_selection(row, col)
+            
             # Check if the click is on the attack grid
             for row in range(self.gridSz):
                 for col in range(self.gridSz):
@@ -279,17 +460,113 @@ class GameSurface:
                     y = self.offset_y2 + row * self.cellSz
                     attack_rect = pygame.Rect(x, y, self.cellSz, self.cellSz)
                     if attack_rect.collidepoint(mouse_pos):
-                        return self.handle_attack(mouse_pos, row, col) # Pass row and col
+                        # Deseleccionar barco al atacar
+                        self.selected_ship = None
+                        return self.handle_attack(mouse_pos, row, col)
 
             # Check if the click is on the End Turn button
             if self.btnEndTurn.collidepoint(mouse_pos):
-                if self.shot_made or self.game_over:
+                if self.action_taken or self.game_over:
+                    # Deseleccionar barco al finalizar turno
+                    self.selected_ship = None
                     return "end_turn"
         return None
+    
+    def handle_ship_selection(self, row, col):
+        # Verificar si hay un barco en la posición seleccionada
+        for ship in self.player.ships:
+            if (row, col) in ship.position:
+                # Si ya estaba seleccionado, deseleccionarlo
+                if self.selected_ship == ship:
+                    self.selected_ship = None
+                else:
+                    self.selected_ship = ship
+                return "ship_selected"
+        
+        # Si no hay barco, deseleccionar
+        self.selected_ship = None
+        return None
+    
+    def move_selected_ship(self, direction):
+        if not self.selected_ship or self.action_taken:
+            return None
+        
+        # Guardar las posiciones actuales del barco antes de moverlo
+        old_positions = self.selected_ship.position.copy()
+        
+        # Verificar si el barco puede moverse en esa dirección
+        if self.selected_ship.can_move(direction, self.gridSz, self.player.ships):
+            # Registrar las posiciones dañadas antes de mover
+            for idx, pos in enumerate(old_positions):
+                if self.selected_ship.damage_positions[idx]:
+                    self.damaged_positions.add(pos)
+            
+            # Mover el barco
+            self.selected_ship.move(direction)
+            
+            # Verificar si alguna parte del barco se ha movido a una posición que ya fue disparada
+            # y marcarla como dañada automáticamente
+            self.check_for_damage_after_move(self.selected_ship)
+            
+            # Actualizar el tablero del jugador
+            self.update_player_board()
+            
+            # Marcar que se ha realizado una acción
+            self.action_taken = True
+            
+            return "ship_moved"
+        else:
+            # Mostrar mensaje de que no se puede mover
+            self.collision_message = f"No se puede mover el barco en esa dirección"
+            self.message_timer = pygame.time.get_ticks() + 2000  # Mostrar por 2 segundos
+            return None
+    
+    def check_for_damage_after_move(self, ship):
+        """Verifica si alguna parte del barco se ha movido a una posición que ya fue disparada"""
+        # Obtener todas las posiciones que han sido disparadas (hits y misses del oponente)
+        opponent_shots = set()
+        if hasattr(self.opponent, 'hits'):
+            opponent_shots.update(self.opponent.hits)
+        if hasattr(self.opponent, 'misses'):
+            opponent_shots.update(self.opponent.misses)
+        
+        # También incluir las posiciones dañadas registradas
+        opponent_shots.update(self.damaged_positions)
+        
+        # Verificar cada segmento del barco
+        for idx, pos in enumerate(ship.position):
+            # Si la posición ya fue disparada, marcar esa parte como dañada
+            if pos in opponent_shots or pos in self.damaged_positions:
+                if not ship.damage_positions[idx]:  # Solo si no estaba ya dañada
+                    ship.damage_positions[idx] = True
+                    ship.life -= 1  # Reducir la vida del barco
+                    # Añadir a las posiciones dañadas
+                    self.damaged_positions.add(pos)
+    
+    def update_player_board(self):
+        # Limpiar el tablero, pero mantener las posiciones dañadas como 'o'
+        self.player.board.grid = [['w' for _ in range(self.player.board.size)] for _ in range(self.player.board.size)]
+        
+        # Marcar las posiciones dañadas como 'o' (fallo)
+        for row, col in self.damaged_positions:
+            if 0 <= row < self.player.board.size and 0 <= col < self.player.board.size:
+                # Solo marcar como 'o' si no hay un barco en esa posición
+                if (row, col) not in [pos for ship in self.player.ships for pos in ship.position]:
+                    self.player.board.grid[row][col] = 'o'
+        
+        # Actualizar posiciones de los barcos en el tablero
+        for ship in self.player.ships:
+            for idx, (row, col) in enumerate(ship.position):
+                if 0 <= row < self.player.board.size and 0 <= col < self.player.board.size:
+                    # Marcar como 's' si no está dañada, o como 'x' si está dañada
+                    if ship.damage_positions[idx]:
+                        self.player.board.grid[row][col] = 'x'  # Parte dañada del barco
+                    else:
+                        self.player.board.grid[row][col] = 's'  # Parte intacta del barco
 
-    def handle_attack(self, mouse_pos, row, col): # Receive row and col
+    def handle_attack(self, mouse_pos, row, col):
         # Don't allow shooting if a shot has already been made this turn
-        if self.shot_made or not self.player or not self.opponent or self.game_over:
+        if self.action_taken or not self.player or not self.opponent or self.game_over:
             return None
 
         # Don't allow clicking on already attacked cells
@@ -301,6 +578,14 @@ class GameSurface:
 
         if result == "Disparo exitoso":
             self.hits.append((row, col))
+            
+            # Registrar la posición dañada en el oponente
+            for ship in self.opponent.ships:
+                if (row, col) in ship.position:
+                    # Añadir a las posiciones dañadas del oponente
+                    if hasattr(self.opponent, 'damaged_positions'):
+                        self.opponent.damaged_positions.add((row, col))
+                    break
         else:
             self.misses.append((row, col))
 
@@ -310,9 +595,12 @@ class GameSurface:
             self.game_over = True
             self.winner = f"Player {self.player_number}"
 
-        # Set the shot_made flag to true
+        # Set the action_taken flag to true
+        self.action_taken = True
         self.shot_made = True
         return "shot_made"
 
     def reset_shot_flag(self):
         self.shot_made = False
+        self.action_taken = False
+        self.selected_ship = None

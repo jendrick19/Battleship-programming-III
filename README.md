@@ -271,15 +271,18 @@ class GameSurface:
         height (int): Alto de la superficie en píxeles.
         title (str): Título de la superficie.
         surface (pygame.Surface): Objeto Surface principal del juego.
+        colorT (tuple[int, int, int]): Color del texto del título.
         gridSz (int): Tamaño de las cuadrículas (lado x lado).
         cellSz (int): Tamaño de cada celda de la cuadrícula en píxeles.
         offset_x (int): Desplazamiento horizontal para la cuadrícula de configuración.
         offset_y (int): Desplazamiento vertical para la cuadrícula de configuración.
+        backSur (pygame.image): Imagen de fondo de la superficie.
+        font_tittle (pygame.font.Font): Fuente utilizada para el título.
         offset_x1 (int): Desplazamiento horizontal para la cuadrícula de posiciones del jugador durante el juego.
         offset_y1 (int): Desplazamiento vertical para la cuadrícula de posiciones del jugador durante el juego.
         offset_x2 (int): Desplazamiento horizontal para la cuadrícula de ataque durante el juego.
         offset_y2 (int): Desplazamiento vertical para la cuadrícula de ataque durante el juego.
-        font (pygame.font.Font): Fuente utilizada para el texto.
+        font (pygame.font.Font): Fuente utilizada para el texto general.
         state (str): Estado actual del juego ("setup" o "playing").
         player_number (int): Número del jugador (1 o 2), basado en el título.
         btnContinue (pygame.Rect): Rectángulo para el botón "Continue" durante la configuración.
@@ -294,8 +297,10 @@ class GameSurface:
         shot_made (bool): Indica si el jugador actual ha realizado un disparo en su turno.
         game_over (bool): Indica si el juego ha terminado.
         winner (str or None): Nombre del jugador ganador o None si el juego no ha terminado.
+        collision_message (str): Mensaje a mostrar en caso de colisión de barcos durante la configuración.
+        message_timer (int): Tiempo en milisegundos hasta que desaparece el mensaje de colisión.
     """
-    def __init__(self, title, width, height):
+    def __init__(self, title, width, height, colorT):
         """
         Inicializa la superficie principal del juego.
 
@@ -303,18 +308,22 @@ class GameSurface:
             title (str): Título de la ventana/superficie.
             width (int): Ancho de la superficie.
             height (int): Alto de la superficie.
+            colorT (tuple[int, int, int]): Color del texto del título.
         """
         pygame.font.init()
         self.width = width
         self.height = height
         self.title = title
         self.surface = pygame.Surface((width, height))
-        self.surface.fill((0, 128, 255))
-
+        self.surface.fill((3, 37, 108))
+        self.colorT=colorT
         self.gridSz = 10
         self.cellSz = 30
         self.offset_x = 250
         self.offset_y = 100
+        self.backSur= pygame.image.load("6292.jpg")
+        self.backSur = pygame.transform.scale(self.backSur, (self.width, self.height))
+        self.font_tittle= pygame.font.Font(None, 36)
 
         # For playing phase
         self.offset_x1, self.offset_y1 = 50, 100  # Position grid
@@ -331,9 +340,9 @@ class GameSurface:
             self.player_number = 2
 
         # Buttons
-        self.btnContinue = pygame.Rect(250, 545, 90, 50)
+        self.btnContinue = pygame.Rect((self.width - 90) // 2, 500, 90, 50)
         self.btnReset = pygame.Rect(340, 400, 120, 50)
-        self.btnEndTurn = pygame.Rect(350, 500, 90, 50)
+        self.btnEndTurn = pygame.Rect((self.width - 90) // 2, 500, 90, 50)
 
         # Ships for setup
         self.ships = []
@@ -358,16 +367,26 @@ class GameSurface:
         self.game_over = False
         self.winner = None
 
+        self.collision_message = ""
+        self.message_timer = 0
+
     def setup_player(self, name):
         """
-        Crea el objeto Player para esta superficie y añade los barcos configurados a su flota.
+        Crea el objeto Player para esta superficie y añade los barcos configurados a su flota,
+        verificando previamente si hay colisiones entre los barcos.
 
         Args:
             name (str): El nombre del jugador.
+
+        Returns:
+            bool: True si el jugador se configuró correctamente (sin colisiones), False en caso contrario.
         """
+        if self.has_ship_collisions():
+            return False
+
         self.player = Player(name)
         for ship in self.ships:
-            ship.update_positions()  # Ensure positions are up to date
+            ship.update_positions()
             game_ship = Ship(
                 ship.length,
                 ship.x,
@@ -376,6 +395,7 @@ class GameSurface:
                 f"Ship{ship.length}"
             )
             self.player.add_ship(game_ship)
+        return True
 
     def setup_opponent(self, opponent):
         """
@@ -393,15 +413,29 @@ class GameSurface:
         """
         self.state = "playing"
 
+    def has_ship_collisions(self):
+        """
+        Verifica si hay colisiones entre los barcos en la fase de configuración.
+
+        Returns:
+            bool: True si hay al menos una colisión entre barcos, False en caso contrario.
+        """
+        for i, ship1 in enumerate(self.ships):
+            for ship2 in self.ships[i+1:]:
+                if ship1.check_collision([ship2]):
+                    return True
+        return False
+
     def draw(self):
         """
         Dibuja la superficie del juego, mostrando diferentes elementos según el estado actual.
         """
-        self.surface.fill((0, 128, 255))
+        self.surface.fill((3, 37, 108))
+        self.surface.blit(self.backSur,(0,0))
 
         # Draw title
-        title = self.font.render(self.title, True, (255, 255, 255))
-        title_rect = title.get_rect(center=(self.width // 2, 25))
+        title = self.font_tittle.render(self.title, True, self.colorT )
+        title_rect = title.get_rect(center=(self.width // 2, 45))
         self.surface.blit(title, title_rect)
 
         if self.game_over:
@@ -411,9 +445,14 @@ class GameSurface:
         else:
             self.draw_playing()
 
+        if self.collision_message and pygame.time.get_ticks() < self.message_timer:
+            message = self.font.render(self.collision_message, True, (255, 255, 0))
+            self.surface.blit(message, (self.width // 2 - message.get_width() // 2, 500))
+
     def draw_setup(self):
         """
         Dibuja la interfaz de la fase de configuración, incluyendo la cuadrícula, los barcos arrastrables y el botón "Continue".
+        Muestra advertencias si hay colisiones entre los barcos.
         """
         # Draw grid
         for row in range(self.gridSz):
@@ -421,25 +460,29 @@ class GameSurface:
                 x = self.offset_x + col * self.cellSz
                 y = self.offset_y + row * self.cellSz
                 rect = pygame.Rect(x, y, self.cellSz, self.cellSz)
-                pygame.draw.rect(self.surface, (0, 0, 0), rect, 1)
+                pygame.draw.rect(self.surface, (6, 190, 225), rect, 2)
+
+        has_collisions = self.has_ship_collisions()
 
         # Draw ships
         for ship in self.ships:
             ship.draw(self.surface, self.offset_x, self.offset_y, self.cellSz)
 
         # Draw buttons
-        pygame.draw.rect(self.surface, (255, 0, 0), self.btnContinue)
+        button_color = (100, 100, 100) if has_collisions else (255, 0, 0)
+        pygame.draw.rect(self.surface, button_color, self.btnContinue)
 
         textContinue = self.font.render('Continue', True, (255, 255, 255))
-
-
         rectContinue = textContinue.get_rect(center=self.btnContinue.center)
-
         self.surface.blit(textContinue, rectContinue)
 
         # Instructions
         textRotate = self.font.render('Press SPACE while dragging to rotate', True, (255, 255, 255))
         self.surface.blit(textRotate, (self.offset_x, self.offset_y + self.gridSz * self.cellSz + 10))
+
+        if has_collisions:
+            warning = self.font.render('The ships are overlapped! Reposition them.', True, (255, 255, 0))
+            self.surface.blit(warning, (self.offset_x, self.offset_y + self.gridSz * self.cellSz + 40))
 
     def draw_playing(self):
         """
@@ -447,30 +490,30 @@ class GameSurface:
         los disparos realizados y el botón "End Turn".
         """
         # Draw position grid
-        titlePosit = self.font.render('POSITIONS', True, (0, 0, 0))
-        self.surface.blit(titlePosit, (self.offset_x1 + 110, self.offset_y1 - 40))
+        titlePosit = self.font.render('POSITIONS', True, (255, 255, 255))
+        self.surface.blit(titlePosit, (self.offset_x1 + 110, self.offset_y1 - 30))
 
         for row in range(self.gridSz):
             for col in range(self.gridSz):
                 x = self.offset_x1 + col * self.cellSz
                 y = self.offset_y1 + row * self.cellSz
                 rect = pygame.Rect(x, y, self.cellSz, self.cellSz)
-                pygame.draw.rect(self.surface, (0, 0, 0), rect, 1)
+                pygame.draw.rect(self.surface, (6, 190, 225), rect, 2)
 
                 # Draw ships
                 if self.player and (row, col) in [pos for ship in self.player.ships for pos in ship.position]:
                     pygame.draw.rect(self.surface, (0, 0, 0), rect)
 
         # Draw attack grid
-        titleAttck = self.font.render('ATTACK', True, (0, 0, 0))
-        self.surface.blit(titleAttck, (self.offset_x2 + 120, self.offset_y2 - 40))
+        titleAttck = self.font.render('ATTACK', True, (255, 255, 255))
+        self.surface.blit(titleAttck, (self.offset_x2 + 120, self.offset_y2 - 30))
 
         for row in range(self.gridSz):
             for col in range(self.gridSz):
                 x = self.offset_x2 + col * self.cellSz
                 y = self.offset_y2 + row * self.cellSz
                 rect = pygame.Rect(x, y, self.cellSz, self.cellSz)
-                pygame.draw.rect(self.surface, (0, 0, 0), rect, 1)
+                pygame.draw.rect(self.surface, (6, 190, 225), rect, 2)
 
                 # Draw hits (red X)
                 if (row, col) in self.hits:
@@ -517,10 +560,7 @@ class GameSurface:
         """
         Dibuja la pantalla de fin de juego, mostrando el ganador y el botón para reiniciar.
         """
-        self.title = "Game over"
-        title = self.font.render(self.title, True, (255, 255, 255))
-        title_rect = title.get_rect(center=(self.width // 2, 25))
-        self.surface.blit(title, title_rect)
+        self.title = "GAME OVER"
 
         textReset = self.font.render('RESET GAME', True, (255, 255, 255))
         rectReset = textReset.get_rect(center=self.btnReset.center)
@@ -533,30 +573,45 @@ class GameSurface:
 
     def handle_events(self, events):
         """
-        Maneja los eventos de pygame, especialmente durante la fase de configuración para permitir el arrastre y rotación de los barcos.
+        Maneja los eventos de pygame.
+
+        Durante la fase de "setup", itera sobre los eventos y los pasa a cada barco
+        para permitir la interacción del usuario (arrastrar y soltar).
 
         Args:
-            events (list): Lista de eventos de pygame a procesar.
+        events (list): Una lista de objetos pygame.event.Event a procesar.
         """
         if self.state == "setup":
             for event in events:
                 for ship in self.ships:
-                    ship.handle_event(event, self.offset_x, self.offset_y, self.cellSz, self.gridSz)
+                    ship.handle_event(event, self.offset_x, self.offset_y, self.cellSz, self.gridSz, self.ships)
 
     def handle_click(self, mouse_pos):
         """
-        Maneja los clics del ratón, realizando acciones según el estado del juego y la posición del clic.
+        Maneja los clics del ratón en la superficie del juego.
+
+        En la fase de "setup", verifica si se hizo clic en el botón "Continue".
+        Si no hay colisiones entre los barcos, retorna "continue".
+        Si hay colisiones, muestra un mensaje y establece un temporizador.
+
+        En la fase de "playing", verifica si se hizo clic en el botón "End Turn".
+        Si se ha realizado un disparo o el juego ha terminado, retorna "end_turn".
+        Si no se hizo clic en el botón "End Turn", llama a `handle_attack`.
 
         Args:
             mouse_pos (tuple[int, int]): La posición (x, y) del clic del ratón.
 
         Returns:
-            str or None: Una cadena que indica la acción realizada ("continue", "end_turn", "shot_made")
-                         o None si no se realizó ninguna acción relevante.
+            str or None: Una cadena que indica la acción ("continue", "end_turn", "shot_made")
+                     o None si no se realizó ninguna acción relevante.
         """
         if self.state == "setup":
             if self.btnContinue.collidepoint(mouse_pos):
-                return "continue"
+                if not self.has_ship_collisions():
+                    return "continue"
+                else:
+                    self.collision_message = "You cannot continue with overlapping ships!"
+                    self.message_timer = pygame.time.get_ticks() + 3000
         else:  # playing state
             if self.btnEndTurn.collidepoint(mouse_pos):
                 if self.shot_made or self.game_over:
@@ -567,7 +622,14 @@ class GameSurface:
 
     def handle_attack(self, mouse_pos):
         """
-        Maneja la lógica de un intento de ataque durante la fase de juego.
+        Maneja los clics del ratón durante la fase de ataque ("playing").
+
+        Verifica si el clic ocurrió dentro de la cuadrícula de ataque y si ya se
+        realizó un disparo en este turno. No permite disparar en celdas ya atacadas.
+        Utiliza el objeto `Player` para registrar el disparo en el oponente.
+        Actualiza las listas de `hits` o `misses` según el resultado del disparo.
+        Verifica si el juego ha terminado llamando a `game_logic.check_victory()`.
+        Establece la bandera `shot_made` en True si se realizó un disparo.
 
         Args:
             mouse_pos (tuple[int, int]): La posición (x, y) del clic del ratón.
@@ -613,290 +675,10 @@ class GameSurface:
         return None
 
     def reset_shot_flag(self):
+        """
+        Restablece la bandera `shot_made` a False, permitiendo al jugador realizar un nuevo disparo en su turno.
+        """
         self.shot_made = False
-```
-
-### ship.py
-
-```
-import pygame
-
-class Ship:
-    """
-    Clase para representar un barco en el juego Battleship, con funcionalidades de colocación, rotación y seguimiento de daño.
-
-    Atributos:
-        length (int): Longitud del barco (número de celdas que ocupa).
-        x (float): Posición horizontal del barco en la cuadrícula (en unidades de celda).
-        y (float): Posición vertical del barco en la cuadrícula (en unidades de celda).
-        life (int): Puntos de vida restantes del barco, inicialmente igual a su longitud.
-        isHorizontal (bool): Indica si el barco está orientado horizontalmente (True) o verticalmente (False). Por defecto es True.
-        name (str or None): Nombre del barco. Si es None, se genera automáticamente como "Ship{length}".
-        position (list[tuple[int, int]]): Lista de coordenadas (fila, columna) que ocupa el barco en la cuadrícula. Se actualiza al mover o rotar el barco.
-
-        # Atributos para la interfaz de usuario (UI)
-        dragging (bool): Indica si el barco está siendo arrastrado por el jugador.
-        offset_x (float): Desplazamiento horizontal interno durante el arrastre para mantener la posición relativa del ratón.
-        offset_y (float): Desplazamiento vertical interno durante el arrastre para mantener la posición relativa del ratón.
-    """
-    def __init__(self, length, x, y, isHorizontal=True, name=None):
-        """
-        Inicializa un nuevo objeto Ship.
-
-        Args:
-            length (int): La longitud del barco.
-            x (float): La posición inicial horizontal del barco en la cuadrícula.
-            y (float): La posición inicial vertical del barco en la cuadrícula.
-            isHorizontal (bool, optional): La orientación inicial del barco. Defaults to True (horizontal).
-            name (str, optional): El nombre del barco. Defaults to None, en cuyo caso se genera un nombre automático.
-        """
-        self.length = length
-        self.x = x
-        self.y = y
-        self.life = length
-        self.isHorizontal = isHorizontal
-        self.name = name or f"Ship{length}"
-        self.position = self._calculate_positions()
-
-        # UI properties
-        self.dragging = False
-        self.offset_x = 0
-        self.offset_y = 0
-
-    def _calculate_positions(self):
-        """
-        Calcula la lista de coordenadas (fila, columna) que ocupa el barco basado en su posición, longitud y orientación.
-
-        Returns:
-            list[tuple[int, int]]: Una lista de tuplas representando las celdas ocupadas por el barco.
-        """
-        positions = []
-        if self.isHorizontal:
-            for i in range(self.length):
-                positions.append((int(self.y), int(self.x) + i))
-        else:
-            for i in range(self.length):
-                positions.append((int(self.y) + i, int(self.x)))
-        return positions
-
-    def update_positions(self):
-        """
-        Actualiza el atributo `position` del barco llamando a `_calculate_positions()`.
-        Debe llamarse después de cualquier cambio en `x`, `y` o `isHorizontal`.
-        """
-        self.position = self._calculate_positions()
-
-    def check_sunken_ship(self):
-        """
-        Verifica si el barco ha sido hundido.
-
-        Returns:
-            bool: True si la vida del barco es 0, False en caso contrario.
-        """
-        return self.life == 0
-
-    def damage_received_ship(self):
-        """
-        Reduce la vida del barco en 1 si aún tiene vida.
-        """
-        if self.life > 0:
-            self.life -= 1
-
-    def handle_event(self, event, offset_x, offset_y, cellSize, gridSize=10):
-        """
-        Maneja los eventos de pygame para permitir arrastrar, soltar y rotar el barco en la cuadrícula durante la fase de configuración.
-
-        Args:
-            event (pygame.event.Event): El evento de pygame a procesar.
-            offset_x (int): El desplazamiento horizontal de la cuadrícula en la pantalla.
-            offset_y (int): El desplazamiento vertical de la cuadrícula en la pantalla.
-            cellSize (int): El tamaño de cada celda de la cuadrícula en píxeles.
-            gridSize (int, optional): El tamaño de la cuadrícula (lado x lado). Defaults to 10.
-        """
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            mouse_x, mouse_y = event.pos
-
-            if self.isHorizontal:
-                ship_rect = pygame.Rect(
-                    offset_x + self.x * cellSize,
-                    offset_y + self.y * cellSize,
-                    self.length * cellSize,
-                    cellSize
-                )
-            else:
-                ship_rect = pygame.Rect(
-                    offset_x + self.x * cellSize,
-                    offset_y + self.y * cellSize,
-                    cellSize,
-                    self.length * cellSize
-                )
-
-            if ship_rect.collidepoint(mouse_x, mouse_y):
-                self.dragging = True
-                self.offset_x = self.x * cellSize - (mouse_x - offset_x)
-                self.offset_y = self.y * cellSize - (mouse_y - offset_y)
-
-        elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
-            self.dragging = False
-
-            self.x = round((self.x * cellSize) / cellSize)
-            self.y = round((self.y * cellSize) / cellSize)
-
-            if self.isHorizontal:
-                self.x = max(0, min(gridSize - self.length, self.x))
-                self.y = max(0, min(gridSize - 1, self.y))
-            else:
-                self.x = max(0, min(gridSize - 1, self.x))
-                self.y = max(0, min(gridSize - self.length, self.y))
-
-            self.update_positions()
-
-        elif event.type == pygame.MOUSEMOTION and self.dragging:
-            mouse_x, mouse_y = event.pos
-
-            newX = (mouse_x - offset_x + self.offset_x) / cellSize
-            newY = (mouse_y - offset_y + self.offset_y) / cellSize
-
-            if self.isHorizontal:
-                self.x = max(0, min(gridSize - self.length, newX))
-                self.y = max(0, min(gridSize - 1, newY))
-            else:
-                self.x = max(0, min(gridSize - 1, newX))
-                self.y = max(0, min(gridSize - self.length, newY))
-
-        elif event.type == pygame.KEYDOWN and self.dragging and event.key == pygame.K_SPACE:
-            self.rotate(gridSize)
-            self.update_positions()
-
-    def rotate(self, gridSize):
-        """
-        Rota el barco 90 grados, ajustando su posición si es necesario para que permanezca dentro de los límites de la cuadrícula.
-
-        Args:
-            gridSize (int): El tamaño de la cuadrícula.
-        """
-        if self.isHorizontal:
-            center_x = self.x + self.length / 2
-            center_y = self.y + 0.5
-        else:
-            center_x = self.x + 0.5
-            center_y = self.y + self.length / 2
-
-        self.isHorizontal = not self.isHorizontal
-
-        if self.isHorizontal:
-            newX = center_x - self.length / 2
-            newY = center_y - 0.5
-        else:
-            newX = center_x - 0.5
-            newY = center_y - self.length / 2
-
-        if self.isHorizontal:
-            self.x = max(0, min(gridSize - self.length, newX))
-            self.y = max(0, min(gridSize - 1, newY))
-        else:
-            self.x = max(0, min(gridSize - 1, newX))
-            self.y = max(0, min(gridSize - self.length, newY))
-
-    def draw(self, surface, offset_x, offset_y, cellSize):
-        """
-        Dibuja el barco en la superficie dada.
-
-        Args:
-            surface (pygame.Surface): La superficie en la que se va a dibujar el barco.
-            offset_x (int): El desplazamiento horizontal de la cuadrícula en la pantalla.
-            offset_y (int): El desplazamiento vertical de la cuadrícula en la pantalla.
-            cellSize (int): El tamaño de cada celda de la cuadrícula en píxeles.
-        """
-        if self.isHorizontal:
-            for i in range(self.length):
-                x = offset_x + (self.x + i) * cellSize
-                y = offset_y + self.y * cellSize
-                rect = pygame.Rect(x, y, cellSize, cellSize)
-                pygame.draw.rect(surface, (0, 0, 0), rect)
-        else:
-            for i in range(self.length):
-                x = offset_x + self.x * cellSize
-                y = offset_y + (self.y + i) * cellSize
-                rect = pygame.Rect(x, y, cellSize, cellSize)
-                pygame.draw.rect(surface, (0, 0, 0), rect)
-```
-
-### window.py
-
-```
-import pygame
-
-class Window:
-    """
-    Clase para gestionar la ventana principal del juego.
-
-    Atributos:
-        width (int): Ancho de la ventana en píxeles.
-        height (int): Alto de la ventana en píxeles.
-        title (str): Título de la ventana.
-        window (pygame.Surface): Objeto Surface que representa la ventana principal.
-        font (pygame.font.Font): Fuente utilizada para el texto en la ventana.
-        btnPlay (pygame.Rect): Rectángulo para el botón "Play" en el menú principal.
-        btnExit (pygame.Rect): Rectángulo para el botón "Exit" en el menú principal.
-    """
-    def __init__(self, width, height, title):
-        """
-        Inicializa la ventana principal del juego.
-
-        Args:
-            width (int): Ancho deseado para la ventana.
-            height (int): Alto deseado para la ventana.
-            title (str): Título que se mostrará en la barra de la ventana.
-        """
-        self.width = width
-        self.height = height
-        self.title = title
-        self.window = pygame.display.set_mode((width, height))
-        pygame.display.set_caption(title)
-        self.window.fill((0, 128, 255))
-
-        self.font = pygame.font.Font(None, 36) # Fuente predeterminada de Pygame, tamaño 36
-
-        self.btnPlay = pygame.Rect(350, 250, 100, 50) # Rectángulo para el botón "Play"
-        self.btnExit = pygame.Rect(350, 350, 100, 50) # Rectángulo para el botón "Exit"
-
-    def drawBtns(self):
-        """
-        Dibuja los botones "Play" y "Exit" en el menú principal de la ventana.
-        """
-        self.window.fill((0, 128, 255))
-
-        title = self.font.render(self.title, True, (255, 255, 255)) # Renderiza el título en blanco
-        title_rect = title.get_rect(center=(self.width // 2, 100)) # Centra el título
-        self.window.blit(title, title_rect) # Dibuja el título en la ventana
-
-        pygame.draw.rect(self.window, (255, 0, 0), self.btnPlay) # Dibuja el botón "Play" en rojo
-        pygame.draw.rect(self.window, (255, 0, 0), self.btnExit) # Dibuja el botón "Exit" en rojo
-
-        play_text = self.font.render('Play', True, (255, 255, 255)) # Renderiza el texto "Play" en blanco
-        exit_text = self.font.render('Exit', True, (255, 255, 255)) # Renderiza el texto "Exit" en blanco
-
-        play_rect = play_text.get_rect(center=self.btnPlay.center) # Centra el texto en el botón "Play"
-        exit_rect = exit_text.get_rect(center=self.btnExit.center) # Centra el texto en el botón "Exit"
-
-        self.window.blit(play_text, play_rect) # Dibuja el texto "Play" en el botón
-        self.window.blit(exit_text, exit_rect) # Dibuja el texto "Exit" en el botón
-
-    def renderSurface(self, surface):
-        """
-        Dibuja una superficie dada sobre la ventana principal.
-
-        Args:
-            surface (pygame.Surface): La superficie a renderizar.
-        """
-        self.window.blit(surface, (0, 0))
-
-    def updateWindow(self):
-        """
-        Actualiza toda la ventana para mostrar los cambios realizados.
-        """
-        pygame.display.update()
 ```
 
 ### main.py
@@ -913,15 +695,15 @@ def game():
     """
     Función principal que ejecuta el juego Battleship.
     Inicializa Pygame, crea las ventanas y superficies necesarias,
-    y gestiona el flujo del juego entre la configuración y la partida.
+    y gestiona el flujo del juego entre el menú, la configuración de los jugadores y la partida.
     """
     pygame.init()
 
     window = Window(800, 600, 'BATTLESHIP')
     window.drawBtns()
 
-    surfacePlayer1 = GameSurface('Choose the position of your ships player 1', 800, 600)
-    surfacePlayer2 = GameSurface('Choose the position of your ships player 2', 800, 600)
+    surfacePlayer1 = GameSurface('Choose the position of your ships player 1', 800, 600, (119, 255, 148))
+    surfacePlayer2 = GameSurface('Choose the position of your ships player 2', 800, 600, (255, 163, 175))
 
     execute = True
     current_surface = None
@@ -934,10 +716,10 @@ def game():
                 execute = False
 
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                mouse_pos = pygame.mouse.get_pos() #Obtención de la posición del mouse
+                mouse_pos = pygame.mouse.get_pos() # Obtiene la posición del ratón
 
                 if current_surface is None:
-                    # Menu principal
+
                     if window.btnPlay.collidepoint(mouse_pos):
                         current_surface = surfacePlayer1
                         current_surface.draw()
@@ -951,23 +733,21 @@ def game():
                     action = current_surface.handle_click(mouse_pos)
 
                     if action == "continue":
-                        # Fin de la configuración de un jugador
                         if current_surface == surfacePlayer1:
-                            surfacePlayer1.setup_player("Player 1")
-                            current_surface = surfacePlayer2
+                            if current_surface.setup_player("Player 1"):
+                                current_surface = surfacePlayer2
                         elif current_surface == surfacePlayer2:
-                            surfacePlayer2.setup_player("Player 2")
+                            if current_surface.setup_player("Player 2"):
+                                # Set up opponents
+                                surfacePlayer1.setup_opponent(surfacePlayer2.player)
+                                surfacePlayer2.setup_opponent(surfacePlayer1.player)
 
-                            # Configurar oponentes
-                            surfacePlayer1.setup_opponent(surfacePlayer2.player)
-                            surfacePlayer2.setup_opponent(surfacePlayer1.player)
+                                # Switch to playing mode
+                                surfacePlayer1.switch_to_playing()
+                                surfacePlayer2.switch_to_playing()
 
-                            # Cambiar al modo de juego
-                            surfacePlayer1.switch_to_playing()
-                            surfacePlayer2.switch_to_playing()
-
-                            current_surface = surfacePlayer1
-                            game_started = True
+                                current_surface = surfacePlayer1
+                                game_started = True
 
                     elif action == "end_turn" and current_surface.game_over == False:
                         # Fin del turno de un jugador durante la partida
@@ -985,7 +765,6 @@ def game():
                 game() # Reiniciar el juego llamando a la función game() de nuevo
                 return
 
-            # Dibujar la superficie actual
             current_surface.handle_events(events)
             current_surface.draw()
             window.renderSurface(current_surface.surface)
@@ -997,6 +776,5 @@ def game():
     pygame.quit()
     sys.exit()
 
-# Iniciar el juego
 game()
 ```

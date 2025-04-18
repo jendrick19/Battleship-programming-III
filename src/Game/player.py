@@ -6,6 +6,9 @@ class Player:
         self.name = name
         self.board = Board(10)
         self.ships = []
+        self.damaged_positions = set()  # Conjunto para rastrear posiciones dañadas
+        self.hits = []  # Posiciones donde el jugador ha acertado
+        self.misses = []  # Posiciones donde el jugador ha fallado
     
     def add_ship(self, ship):
         self.ships.append(ship)
@@ -14,23 +17,30 @@ class Player:
                 self.board.grid[row][col] = 's'
     
     def shoot_at_opponent(self, opponent, row, col):
-      
         result = "Disparo fallido"
         
+        # Verificar si hay un barco en la posición
         if opponent.board.grid[row][col] == 's':
-            opponent.board.grid[row][col] = 'x'
+            opponent.board.grid[row][col] = 'x'  # Marcar como golpe
             result = "Disparo exitoso"
             
+            # Registrar el acierto
+            self.hits.append((row, col))
+            
+            # Buscar el barco que fue golpeado y dañarlo
             for ship in opponent.ships:
                 if (row, col) in ship.position:
-                    ship.damage_received_ship(row,col)
+                    ship.damage_received_ship(row, col)
+                    # Añadir a las posiciones dañadas
+                    opponent.damaged_positions.add((row, col))
                     break
         else:
+            # Marcar como fallo
             opponent.board.grid[row][col] = 'o'
+            # Registrar el fallo
+            self.misses.append((row, col))
         
         return result
     
     def all_ships_sunken(self):
         return all(ship.check_sunken_ship() for ship in self.ships)
-
-

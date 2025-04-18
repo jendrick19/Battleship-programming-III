@@ -17,6 +17,7 @@ def game():
     execute = True
     current_surface = None
     game_started = False
+    mouse_pos = (0, 0)  # Inicializar mouse_pos
 
     while execute:
         events = pygame.event.get()
@@ -64,12 +65,18 @@ def game():
                         else:
                             current_surface = surfacePlayer1
                             surfacePlayer1.reset_shot_flag()
+                    
+                    # Manejar eventos de movimiento de barcos
+                    elif action == "ship_moved":
+                        # No es necesario hacer nada especial aquí, solo redibujamos
+                        pass
 
         if current_surface is not None:
-            
-            if current_surface.btnReset.collidepoint(mouse_pos) and current_surface.game_over:
-                game()
-                return
+            # Verificar si se hizo clic en el botón de reinicio cuando el juego ha terminado
+            if hasattr(current_surface, 'game_over') and current_surface.game_over and hasattr(current_surface, 'btnReset'):
+                if current_surface.btnReset.collidepoint(mouse_pos):
+                    game()
+                    return
 
             current_surface.handle_events(events)
             current_surface.draw()
