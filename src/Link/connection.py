@@ -1,61 +1,61 @@
 import socket
-import threading
 import json
 
 class Conexion:
-    def __init__(self, modo_servidor=False, ip='localhost', puerto=5000):
+    def __init__(self, modo_servidor: bool, ip: str = "0.0.0.0", puerto: int = 5000):
         self.modo_servidor = modo_servidor
         self.ip = ip
         self.puerto = puerto
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.conexion = None  # Solo se usará en modo servidor
-        self.direccion = None
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.canal = None
 
         if self.modo_servidor:
-            self.socket.bind((self.ip, self.puerto))
-            self.socket.listen(1)
-            print(f"[SERVIDOR] Esperando conexión en {self.ip}:{self.puerto}...")
-            self.conexion, self.direccion = self.socket.accept()
-            print(f"[SERVIDOR] Conectado con {self.direccion}")
+            self._iniciar_como_servidor()
         else:
-            try:
-                self.socket.connect((self.ip, self.puerto))
-                print(f"[CLIENTE] Conectado a {self.ip}:{self.puerto}")
-            except socket.error as e:
-                print(f"[CLIENTE] Error al conectar con el servidor: {e}")
-                raise ConnectionError("No se pudo conectar con el servidor")
+            self._iniciar_como_cliente()
 
-    def enviar_datos(self, datos):
+    def _iniciar_como_servidor(self):
         try:
-            mensaje = json.dumps(datos).encode('utf-8')
-            if self.modo_servidor:
-                self.conexion.sendall(mensaje)
-            else:
-                self.socket.sendall(mensaje)
-        except Exception as e:
-            print(f"[CONEXIÓN] Error al enviar datos: {e}")
+            self.sock.bind((self.ip, self.puerto))
+            self.sock.listen(1)
+            print(f"[SERVIDOR] Esperando conexión en {self.ip}:{self.puerto}...")
+            self.canal, direccion = self.sock.accept()
+            print(f"[SERVIDOR] Cliente conectado desde {direccion}")
+        except Exception as error:
+            raise ConnectionError(
+                f"[ERROR SERVIDOR] No se pudo iniciar el servidor: {error}"
+            )
 
-    def recibir_datos(self):
+    def _iniciar_como_cliente(self):
         try:
-            buffer = b''
-            while True:
-                chunk = (self.conexion if self.modo_servidor else self.socket).recv(4096)
-                if not chunk:
-                    break
-                buffer += chunk
-                try:
-                    return json.loads(buffer.decode('utf-8'))
-                except json.JSONDecodeError:
-                    continue  # Aún no se ha recibido el JSON completo
-        except Exception as e:
-            print(f"[CONEXIÓN] Error al recibir datos: {e}")
+            self.sock.connect((self.ip, self.puerto))
+            self.canal = self.sock
+            print(f"[CLIENTE] Conectado al servidor en {self.ip}:{self.puerto}")
+        except Exception as error:
+            raise ConnectionError(
+                f"[ERROR CLIENTE] No se pudo conectar al servidor: {error}"
+            )
+
+    def enviar_datos(self, info: dict):
+        try:
+            mensaje = json.dumps(info).encode("utf-8")
+            self.canal.sendall(mensaje)
+        except Exception as error:
+            print(f"[ERROR ENVÍO] {error}")
+
+    def recibir_datos(self) -> dict:
+        try:
+            datos = self.canal.recv(1024).decode("utf-8")
+            return json.loads(datos)
+        except Exception as error:
+            print(f"[ERROR RECEPCIÓN] {error}")
             return {}
 
     def finalizar(self):
         try:
-            if self.modo_servidor and self.conexion:
-                self.conexion.close()
-            self.socket.close()
-            print("[CONEXIÓN] Conexión cerrada.")
-        except Exception as e:
-            print(f"[CONEXIÓN] Error al cerrar conexión: {e}")
+            if self.canal:
+                self.canal.close()
+            self.sock.close()
+            print("[CONEXIÓN] Cerrada exitosamente")
+        except Exception as error:
+            print(f"[ERROR AL CERRAR] {error}")
