@@ -2,12 +2,13 @@ import socket
 import json
 
 class Conexion:
-    def __init__(self, modo_servidor: bool, ip: str = "0.0.0.0", puerto: int = 5000):
+    def __init__(self, modo_servidor: bool, ip: str = "0.0.0.0", puerto: int = 5000, timeout: int = 10):
         self.modo_servidor = modo_servidor
         self.ip = ip
         self.puerto = puerto
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.canal = None
+        self.timeout = timeout  # Tiempo de espera en segundos
 
         if self.modo_servidor:
             self._iniciar_como_servidor()
@@ -21,6 +22,7 @@ class Conexion:
             print(f"[SERVIDOR] Esperando conexión en {self.ip}:{self.puerto}...")
             self.canal, direccion = self.sock.accept()
             print(f"[SERVIDOR] Cliente conectado desde {direccion}")
+            self.canal.settimeout(self.timeout)  # Configurar timeout para la recepción
         except Exception as error:
             raise ConnectionError(
                 f"[ERROR SERVIDOR] No se pudo iniciar el servidor: {error}"
@@ -31,6 +33,7 @@ class Conexion:
             self.sock.connect((self.ip, self.puerto))
             self.canal = self.sock
             print(f"[CLIENTE] Conectado al servidor en {self.ip}:{self.puerto}")
+            self.canal.settimeout(self.timeout)  # Configurar timeout para la recepción
         except Exception as error:
             raise ConnectionError(
                 f"[ERROR CLIENTE] No se pudo conectar al servidor: {error}"
@@ -40,13 +43,19 @@ class Conexion:
         try:
             mensaje = json.dumps(info).encode("utf-8")
             self.canal.sendall(mensaje)
+            print(f"[ENVÍO] Datos enviados: {info}")
         except Exception as error:
             print(f"[ERROR ENVÍO] {error}")
 
     def recibir_datos(self) -> dict:
         try:
             datos = self.canal.recv(1024).decode("utf-8")
+            if not datos:
+                raise Exception("[ERROR RECEPCIÓN] No se recibieron datos.")
             return json.loads(datos)
+        except socket.timeout:
+            print(f"[ERROR RECEPCIÓN] Tiempo de espera agotado. No se recibió respuesta.")
+            return {}
         except Exception as error:
             print(f"[ERROR RECEPCIÓN] {error}")
             return {}

@@ -4,6 +4,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '.
 import pygame
 from src.Models.window import Window
 from src.Models.gameSurface import GameSurface
+from src.Link.connection import Conexion  # Asegúrate de importar la clase Conexion
 
 def game():
     pygame.init()
@@ -19,6 +20,12 @@ def game():
     game_started = False
     mouse_pos = (0, 0)  # Inicializar mouse_pos
 
+    # Inicializa la conexión
+    modo_servidor = False  # Establecer si este jugador es el servidor o cliente
+    ip = "localhost"  # Dirección IP del servidor (puedes cambiar esto a la IP real del servidor)
+    puerto = 5000  # Puerto para la conexión
+    connection = Conexion(modo_servidor=modo_servidor, ip=ip, puerto=puerto)
+
     while execute:
         events = pygame.event.get()
         for event in events:
@@ -29,7 +36,6 @@ def game():
                 mouse_pos = pygame.mouse.get_pos()
                 
                 if current_surface is None:
-                    
                     if window.btnPlay.collidepoint(mouse_pos):
                         current_surface = surfacePlayer1
                         current_surface.draw()
@@ -47,11 +53,10 @@ def game():
                                 current_surface = surfacePlayer2
                         elif current_surface == surfacePlayer2:
                             if current_surface.setup_player("Player 2"):
-                                # Set up opponents
                                 surfacePlayer1.setup_opponent(surfacePlayer2.player)
                                 surfacePlayer2.setup_opponent(surfacePlayer1.player)
                                 
-                                # Switch to playing mode
+                                # Cambiar a modo de juego
                                 surfacePlayer1.switch_to_playing()
                                 surfacePlayer2.switch_to_playing()
                                 
@@ -65,18 +70,22 @@ def game():
                         else:
                             current_surface = surfacePlayer1
                             surfacePlayer1.reset_shot_flag()
-                    
-                    # Manejar eventos de movimiento de barcos
+
                     elif action == "ship_moved":
-                        # No es necesario hacer nada especial aquí, solo redibujamos
-                        pass
+                        pass  # Redibujar barcos si es necesario
 
         if current_surface is not None:
-            # Verificar si se hizo clic en el botón de reinicio cuando el juego ha terminado
+            # Si el juego ha terminado y el jugador hace clic en reset
             if hasattr(current_surface, 'game_over') and current_surface.game_over and hasattr(current_surface, 'btnReset'):
                 if current_surface.btnReset.collidepoint(mouse_pos):
                     game()
                     return
+
+            # Aquí se maneja la espera del turno del oponente
+            if current_surface == surfacePlayer1 or current_surface == surfacePlayer2:
+                if game_started:
+                    # Esperar a que el otro jugador realice su turno
+                    current_surface.wait_for_opponent_turn(connection)
 
             current_surface.handle_events(events)
             current_surface.draw()
