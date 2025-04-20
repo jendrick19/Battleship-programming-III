@@ -26,6 +26,10 @@ class GameSurface:
         self.font_tittle= pygame.font.Font(None, 36)
         self.show_confirmation = False
         self.connection = connection  # Conexion por socket
+        self._recv_buffer = ""
+        self.status_message = ""
+        self.status_timer = 0
+        self.red_intentos = 0
 
         # For playing phase
         self.offset_x1, self.offset_y1 = 50, 100  # Position grid
@@ -311,132 +315,174 @@ class GameSurface:
         return None
 
     def handle_attack(self, mouse_pos, row, col):
-        # No permitir disparar si ya se hizo un disparo o el juego terminó
-        if self.shot_made or not self.player or not self.opponent or self.game_over:
+        import logging
+        import time
+        import json
+        import select
+
+        logger = logging.getLogger(__name__)
+
+        if self.shot_made or self.game_over or not self.connection or not self.opponent:
             return None
 
-        # No permitir disparar a celdas ya atacadas
+        # Ya atacaste esta casilla
         if (row, col) in self.hits or (row, col) in self.misses:
             return None
 
-        # Si hay conexión, enviar el ataque por red
-        if self.connection:
+        try:
             self.connection.enviar_datos({
                 "type": "attack",
                 "row": row,
                 "col": col
             })
+            logger.debug(f"[ATTACK] Disparo enviado a ({row}, {col})")
 
-            response = self.connection.recibir_datos()
-            if not response:
-                print("No se recibió respuesta del oponente.")
-                return None
-            result = response.get("result")
-        else:
-            # En modo local
-            result = self.player.shoot_at_opponent(self.opponent, row, col)
+            # Esperar ACK del resultado
+            self.status_message = "Esperando confirmación del disparo..."
+            self.status_timer = pygame.time.get_ticks() + 3000
+            self.status_color = (255, 255, 0)
 
-        # Guardar mensaje visual
-        self.last_result_time = pygame.time.get_ticks()
-        if result == "Disparo exitoso":
-            self.last_result_message = "X ¡Le diste!"
-            self.hits.append((row, col))
-        else:
-            self.last_result_message = "O Fallaste"
-            self.misses.append((row, col))
+            start_time = time.time()
+            while time.time() - start_time < 3:
+                ready, _, _ = select.select([self.connection.canal], [], [], 0.1)
+                if ready:
+                    datos = self.connection.canal.recv(self.connection.bufsize).decode("utf-8")
+                    if not datos:
+                        self._cerrar_por_desconexion("El oponente cerró la conexión.")
+                        return None
 
-        # Verificar si se ganó la partida
-        victory_message = self.game_logic.check_victory()
-        if victory_message:
-            self.game_over = True
-            self.winner = f"Player {self.player_number}"
-            if self.connection:
-                self.connection.enviar_datos({
-                    "type": "victory",
-                    "winner": self.player_number
-                })
+                    self._recv_buffer += datos
+                    while '\n' in self._recv_buffer:
+                        raw, self._recv_buffer = self._recv_buffer.split('\n', 1)
+                        try:
+                            msg = json.loads(raw)
+                            if msg.get("type") == "result":
+                                self.last_result_time = pygame.time.get_ticks()
+                                resultado = msg.get("result")
+                                if resultado == "Disparo exitoso":
+                                    self.last_result_message = "X ¡Le diste!"
+                                    self.hits.append((row, col))
+                                else:
+                                    self.last_result_message = "O Fallaste"
+                                    self.misses.append((row, col))
 
-        # Marcar que se hizo un disparo
-        self.shot_made = True
-        return "shot_made"
+                                self.shot_made = True
+                                return "shot_made"
+                        except Exception as e:
+                            logger.warning(f"[ATTACK] Error procesando respuesta: {e}")
+                pygame.time.wait(50)
+
+            # Si no hubo respuesta en 3 segundos
+            self.status_message = "Sin respuesta del oponente"
+            self.status_timer = pygame.time.get_ticks() + 3000
+            self.status_color = (255, 0, 0)
+            logger.error("[ATTACK] Timeout esperando resultado")
+            return None
+
+        except Exception as e:
+            logger.exception("[ATTACK] Fallo al enviar ataque")
+            self.status_message = "Error de red al atacar"
+            self.status_timer = pygame.time.get_ticks() + 3000
+            self.status_color = (255, 0, 0)
+            return None
+
     
     def wait_for_opponent_turn(self):
-        if not self.connection:
-            print("[WAIT] No hay conexión activa.")
+        import json
+        import logging
+        import select
+
+        logger = logging.getLogger(__name__)
+        try:
+            ready, _, _ = select.select([self.connection.canal], [], [], 0.1)
+            if ready:
+                datos = self.connection.canal.recv(self.connection.bufsize).decode("utf-8")
+                if not datos:
+                    self._cerrar_por_desconexion("El socket se cerró inesperadamente.")
+                    return
+
+                self._recv_buffer += datos
+                while '\n' in self._recv_buffer:
+                    raw, self._recv_buffer = self._recv_buffer.split('\n', 1)
+                    try:
+                        msg = json.loads(raw)
+                        self._procesar_mensaje_red(msg)
+                    except Exception as e:
+                        logger.warning(f"[WAIT] JSON inválido: {e}")
+
+        except Exception as e:
+            logger.error(f"[WAIT] Error en select/recv: {e}")
+            self.status_message = "Error de red"
+            self.status_timer = pygame.time.get_ticks() + 3000
+            self.status_color = (255, 0, 0)
+            self._cerrar_por_desconexion(f"Error de red: {e}")      
+
+    def _procesar_mensaje_red(self, msg):
+        import logging
+        logger = logging.getLogger(__name__)
+
+        if not isinstance(msg, dict) or "type" not in msg:
             return
 
-        print("\n[WAIT] ---")
-        print("[WAIT] Esperando datos del oponente...")
+        if msg["type"] == "ping":
+            self.connection.enviar_datos({"type": "pong"})
 
-        data = self.connection.recibir_datos()
+        elif msg["type"] == "pong":
+            pass  # ya lo manejas en connection.py
 
-        if not data:
-            print("[WAIT] No se recibió nada del oponente (timeout o error).")
-            return
-
-        print(f"[WAIT] Datos recibidos: {data}")
-
-        if data["type"] == "turn_ready":
+        elif msg["type"] == "turn_ready":
             self.state = "playing"
-            print("[WAIT] ¡Es tu turno ahora!")
-            print("[WAIT] Estado cambiado a: playing")
-            print("[WAIT] ---\n")
-            return
+            logger.debug("[RED] Es tu turno ahora")
 
-        if data["type"] == "attack":
-            row = data["row"]
-            col = data["col"]
-            print(f"[WAIT] Recibido ataque en fila {row}, columna {col}")
+        elif msg["type"] == "attack":
+            if not all(k in msg for k in ("row", "col")):
+                return
+            if not (0 <= msg["row"] < self.gridSz and 0 <= msg["col"] < self.gridSz):
+                return
 
-            # Procesar ataque
-            result = self.player.shoot_at_opponent(self.opponent, row, col)
-            print(f"[WAIT] Resultado del disparo recibido: {result}")
+            result = self.player.shoot_at_opponent(self.opponent, msg["row"], msg["col"])
+            self.connection.enviar_datos({"type": "result", "result": result})
 
-            # Enviar resultado de vuelta
-            self.connection.enviar_datos({
-                "type": "result",
-                "result": result
-            })
-            print("[WAIT] Resultado enviado al oponente.")
+        elif msg["type"] == "result":
+            if self.shot_made:
+                self.last_result_time = pygame.time.get_ticks()
+                if msg.get("result") == "Disparo exitoso":
+                    self.last_result_message = "X ¡Le diste!"
+                else:
+                    self.last_result_message = "O Fallaste"
 
-            # Verificar si terminó el juego
-            victory_message = self.game_logic.check_victory()
-            if victory_message:
-                self.game_over = True
-                self.winner = f"Player {3 - self.player_number}"
-                print(f"[WAIT] ¡El jugador {self.winner} ha ganado!")
-                self.connection.enviar_datos({
-                    "type": "victory",
-                    "winner": 3 - self.player_number
-                })
-            else:
-                self.state = "waiting_for_opponent"
-                self.shot_made = False
-                print("[WAIT] Ataque procesado, esperando siguiente acción del oponente.")
-                self.draw()
+        elif msg["type"] == "victory":
+            self.game_over = True
+            self.winner = f"Player {msg['winner']}"
+            self.state = "game_over"
 
-        print("[WAIT] ---\n")
+        elif msg["type"] == "turn_complete":
+            self.state = "playing"
+            self.shot_made = False
 
     
     def end_turn(self):
-        print("\n[END TURN] ---")
-        print(f"[END TURN] Jugador {self.player_number} termina su turno.")
-        print(f"[END TURN] Estado actual antes: {self.state}, Disparo hecho: {self.shot_made}")
+        import logging
+        logger = logging.getLogger(__name__)
 
-        self.state = "waiting_for_opponent"
-        self.shot_made = False
+        try:
+            self.connection.enviar_datos({"type": "turn_complete"})
+            logger.debug("[END TURN] Enviado turn_complete")
+            self.state = "waiting_for_opponent"
+            self.shot_made = False
+            self.draw()
+        except Exception as e:
+            logger.error(f"[END TURN] Error: {e}")
+            self.status_message = "Error al terminar turno"
+            self.status_timer = pygame.time.get_ticks() + 3000
+        
+    def _cerrar_por_desconexion(self, motivo="Desconexión"):
+        self.state = "disconnected"
+        self.game_over = True
+        self.winner = motivo
+        self.status_message = motivo
+        self.status_timer = pygame.time.get_ticks() + 5000
 
-        if self.connection:
-            print("[END TURN] Enviando 'turn_ready' al oponente...")
-            self.connection.enviar_datos({
-                "type": "turn_ready"
-            })
-        else:
-            print("[END TURN] Sin conexión activa.")
-
-        self.draw()
-        print("[END TURN] Estado cambiado a waiting. Redibujado.")
-        print("[END TURN] ---\n")
 
     def reset_shot_flag(self):
         self.shot_made = False
