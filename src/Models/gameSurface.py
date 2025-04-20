@@ -1,4 +1,5 @@
 import pygame
+import os
 from src.Models.board import Board
 from src.Game.player import Player
 from src.Game.gameLogic import GameLogic
@@ -17,7 +18,10 @@ class GameSurface:
         self.cellSz = 30
         self.offset_x = 250
         self.offset_y = 100
-        self.backSur= pygame.image.load("6292.jpg")
+        self.last_result_message = ""
+        self.last_result_time = 0
+        ruta_imagen = os.path.join(os.path.dirname(__file__), '..', '..', '6292.jpg')
+        self.backSur = pygame.image.load(os.path.abspath(ruta_imagen))
         self.backSur = pygame.transform.scale(self.backSur, (self.width, self.height))
         self.font_tittle= pygame.font.Font(None, 36)
         self.show_confirmation = False
@@ -175,7 +179,7 @@ class GameSurface:
             self.draw_confirmation_dialog()
 
     def draw_playing(self):
-        # Draw position grid
+        # Tablero de posiciones (izquierda)
         titlePosit = self.font.render('POSITIONS', True, (255, 255, 255))
         self.surface.blit(titlePosit, (self.offset_x1 + 110, self.offset_y1 - 30))
 
@@ -185,12 +189,10 @@ class GameSurface:
                 y = self.offset_y1 + row * self.cellSz
                 rect = pygame.Rect(x, y, self.cellSz, self.cellSz)
                 pygame.draw.rect(self.surface, (6, 190, 225), rect, 2)
-
-                # Draw ships
                 if self.player and (row, col) in [pos for ship in self.player.ships for pos in ship.position]:
                     pygame.draw.rect(self.surface, (0, 0, 0), rect)
 
-        # Draw attack grid
+        # Tablero de ataque (derecha)
         titleAttck = self.font.render('ATTACK', True, (255, 255, 255))
         self.surface.blit(titleAttck, (self.offset_x2 + 120, self.offset_y2 - 30))
 
@@ -201,40 +203,31 @@ class GameSurface:
                 rect = pygame.Rect(x, y, self.cellSz, self.cellSz)
                 pygame.draw.rect(self.surface, (6, 190, 225), rect, 2)
 
-                # Draw hits (red X)
                 if (row, col) in self.hits:
-                    pygame.draw.line(self.surface, (255, 0, 0),
-                                     (x + 5, y + 5),
-                                     (x + self.cellSz - 5, y + self.cellSz - 5),
-                                     3)
-                    pygame.draw.line(self.surface, (255, 0, 0),
-                                     (x + self.cellSz - 5, y + 5),
-                                     (x + 5, y + self.cellSz - 5),
-                                     3)
+                    pygame.draw.line(self.surface, (255, 0, 0), (x + 5, y + 5), (x + self.cellSz - 5, y + self.cellSz - 5), 3)
+                    pygame.draw.line(self.surface, (255, 0, 0), (x + self.cellSz - 5, y + 5), (x + 5, y + self.cellSz - 5), 3)
 
-                # Draw misses (white circle)
                 if (row, col) in self.misses:
-                    pygame.draw.circle(self.surface, (255, 255, 255),
-                                        (x + self.cellSz // 2, y + self.cellSz // 2),
-                                        self.cellSz // 3,
-                                        3)
+                    pygame.draw.circle(self.surface, (255, 255, 255), (x + self.cellSz // 2, y + self.cellSz // 2), self.cellSz // 3, 3)
 
-        # Draw end turn button
-        button_color = (255, 0, 0) if self.shot_made else (100, 100, 100)
-        pygame.draw.rect(self.surface, button_color, self.btnEndTurn)
+        # Botón End Turn y mensajes según el estado
+        if self.state == "waiting_for_opponent":
+            pygame.draw.rect(self.surface, (100, 100, 100), self.btnEndTurn)
+            textWaiting = self.font.render("Esperando...", True, (200, 200, 200))
+            self.surface.blit(textWaiting, self.btnEndTurn.move(15, 10))
+            status = self.font.render("Esperando el turno del oponente...", True, (255, 255, 0))
+            self.surface.blit(status, (280, 410))
+        else:
+            pygame.draw.rect(self.surface, (255, 0, 0) if self.shot_made else (100, 100, 100), self.btnEndTurn)
+            textEndTurn = self.font.render('End Turn', True, (255, 255, 255))
+            self.surface.blit(textEndTurn, self.btnEndTurn.move(10, 10))
 
-        textEndTurn = self.font.render('End Turn', True, (255, 255, 255))
-        rectEndTurn = textEndTurn.get_rect(center=self.btnEndTurn.center)
-        self.surface.blit(textEndTurn, rectEndTurn)
+            if not self.shot_made:
+                turno_msg = self.font.render("Es tu turno", True, (0, 255, 0))
+                self.surface.blit(turno_msg, (320, 410))
 
-        # Display game status
-        if self.player and self.opponent:
-            ships_sunk = sum(1 for ship in self.opponent.ships if ship.check_sunken_ship())
-            total_ships = len(self.opponent.ships)
-            status_text = self.font.render(f"Ships sunk: {ships_sunk}/{total_ships}", True, (255, 255, 255))
-            self.surface.blit(status_text, (600, 545))
-
-            # Display turn status
+        # Estado del disparo
+        if self.state == "playing":
             if self.shot_made:
                 turn_status = self.font.render("Shot made! Click End Turn", True, (255, 255, 0))
                 self.surface.blit(turn_status, (300, 450))
@@ -242,7 +235,21 @@ class GameSurface:
                 turn_status = self.font.render("Make your shot", True, (255, 255, 255))
                 self.surface.blit(turn_status, (340, 450))
 
+            if self.last_result_message and pygame.time.get_ticks() - self.last_result_time < 3000:
+                color = (255, 0, 0) if "X" in self.last_result_message else (255, 255, 255)
+                result_text = self.font.render(self.last_result_message, True, color)
+                self.surface.blit(result_text, (self.width // 2 - result_text.get_width() // 2, 480))
+
+        # Barcos hundidos
+        if self.player and self.opponent:
+            ships_sunk = sum(1 for ship in self.opponent.ships if ship.check_sunken_ship())
+            total_ships = len(self.opponent.ships)
+            status_text = self.font.render(f"Ships sunk: {ships_sunk}/{total_ships}", True, (255, 255, 255))
+            self.surface.blit(status_text, (600, 545))
+
+
     def draw_game_over(self):
+        self.state = "game_over"
         self.title = "GAME OVER"
 
         textReset = self.font.render('RESET GAME', True, (255, 255, 255))
@@ -260,11 +267,8 @@ class GameSurface:
                 for ship in self.ships:
                     ship.handle_event(event, self.offset_x, self.offset_y, self.cellSz, self.gridSz, self.ships)
 
-        elif self.state == "playing":
-
-            # Si es el turno del jugador, maneja los eventos normalmente
-            if self.player_number == 1 or (self.player_number == 2 and self.shot_made):
-                for event in events:
+        elif self.state == "playing" and not self.shot_made:
+            for event in events:
                     if event.type == pygame.MOUSEBUTTONDOWN:
                         mouse_pos = pygame.mouse.get_pos()
                         action = self.handle_click(mouse_pos)
@@ -280,11 +284,17 @@ class GameSurface:
             elif self.btnConfirmNo.collidepoint(mouse_pos):
                 self.show_confirmation = False
                 return None
+
         elif self.state == "setup":
             if self.btnContinue.collidepoint(mouse_pos):
                 if not self.has_ship_collisions():
                     self.show_confirmation = True
+
         elif self.state == "playing":
+            #  Bloqueo si no es tu turno
+            if self.shot_made:
+                return None
+
             # Check if the click is on the attack grid
             for row in range(self.gridSz):
                 for col in range(self.gridSz):
@@ -292,15 +302,15 @@ class GameSurface:
                     y = self.offset_y2 + row * self.cellSz
                     attack_rect = pygame.Rect(x, y, self.cellSz, self.cellSz)
                     if attack_rect.collidepoint(mouse_pos):
-                        return self.handle_attack(mouse_pos, row, col) # Pass row and col
+                        return self.handle_attack(mouse_pos, row, col)
 
-            # Check if the click is on the End Turn button
             if self.btnEndTurn.collidepoint(mouse_pos):
                 if self.shot_made or self.game_over:
                     return "end_turn"
+
         return None
 
-    def handle_attack(self, mouse_pos, row, col):  # Recibe row y col
+    def handle_attack(self, mouse_pos, row, col):
         # No permitir disparar si ya se hizo un disparo o el juego terminó
         if self.shot_made or not self.player or not self.opponent or self.game_over:
             return None
@@ -311,13 +321,13 @@ class GameSurface:
 
         # Si hay conexión, enviar el ataque por red
         if self.connection:
-            self.connection.send({
+            self.connection.enviar_datos({
                 "type": "attack",
                 "row": row,
                 "col": col
             })
 
-            response = self.connection.receive()
+            response = self.connection.recibir_datos()
             if not response:
                 print("No se recibió respuesta del oponente.")
                 return None
@@ -326,9 +336,13 @@ class GameSurface:
             # En modo local
             result = self.player.shoot_at_opponent(self.opponent, row, col)
 
+        # Guardar mensaje visual
+        self.last_result_time = pygame.time.get_ticks()
         if result == "Disparo exitoso":
+            self.last_result_message = "X ¡Le diste!"
             self.hits.append((row, col))
         else:
+            self.last_result_message = "O Fallaste"
             self.misses.append((row, col))
 
         # Verificar si se ganó la partida
@@ -337,7 +351,7 @@ class GameSurface:
             self.game_over = True
             self.winner = f"Player {self.player_number}"
             if self.connection:
-                self.connection.send({
+                self.connection.enviar_datos({
                     "type": "victory",
                     "winner": self.player_number
                 })
@@ -348,80 +362,81 @@ class GameSurface:
     
     def wait_for_opponent_turn(self):
         if not self.connection:
+            print("[WAIT] No hay conexión activa.")
             return
 
-        print("Esperando el turno del oponente...")
+        print("\n[WAIT] ---")
+        print("[WAIT] Esperando datos del oponente...")
 
-        # Esperar ataque del oponente
-        data = self.connection.receive()
+        data = self.connection.recibir_datos()
+
         if not data:
-            print("No se recibió nada del oponente.")
+            print("[WAIT] No se recibió nada del oponente (timeout o error).")
+            return
+
+        print(f"[WAIT] Datos recibidos: {data}")
+
+        if data["type"] == "turn_ready":
+            self.state = "playing"
+            print("[WAIT] ¡Es tu turno ahora!")
+            print("[WAIT] Estado cambiado a: playing")
+            print("[WAIT] ---\n")
             return
 
         if data["type"] == "attack":
             row = data["row"]
             col = data["col"]
-            print(f"Recibido ataque en fila {row}, columna {col}")
+            print(f"[WAIT] Recibido ataque en fila {row}, columna {col}")
 
-            # Procesar el ataque del oponente
-            result = self.opponent.shoot_at_opponent(self.player, row, col)
+            # Procesar ataque
+            result = self.player.shoot_at_opponent(self.opponent, row, col)
+            print(f"[WAIT] Resultado del disparo recibido: {result}")
 
-            # Almacenar el resultado del disparo
-            if result == "Disparo exitoso":
-                self.hits.append((row, col))
-            else:
-                self.misses.append((row, col))
-
-            # Enviar resultado al oponente
-            self.connection.send({
+            # Enviar resultado de vuelta
+            self.connection.enviar_datos({
                 "type": "result",
                 "result": result
             })
+            print("[WAIT] Resultado enviado al oponente.")
 
-            # Verificar si el juego ha terminado
+            # Verificar si terminó el juego
             victory_message = self.game_logic.check_victory()
             if victory_message:
                 self.game_over = True
-                self.winner = f"Player {3 - self.player_number}"  # El otro jugador
-                self.connection.send({
+                self.winner = f"Player {3 - self.player_number}"
+                print(f"[WAIT] ¡El jugador {self.winner} ha ganado!")
+                self.connection.enviar_datos({
                     "type": "victory",
                     "winner": 3 - self.player_number
                 })
             else:
-                # Si no hay victoria, cambiar al turno del jugador 1 (si eres 2) o 2 (si eres 1)
                 self.state = "waiting_for_opponent"
-                print(f"Turno finalizado. Es el turno del jugador {3 - self.player_number} ahora.")
                 self.shot_made = False
-                # Mostrar mensaje para indicar que ahora es el turno del otro jugador
+                print("[WAIT] Ataque procesado, esperando siguiente acción del oponente.")
                 self.draw()
+
+        print("[WAIT] ---\n")
+
     
     def end_turn(self):
-        # Cambiar el estado del turno a "espera del oponente"
-        if self.player_number == 1:
-            self.state = "waiting_for_opponent"
-            # Notificar al jugador 1 que debe esperar
-            print("Turno de espera: Jugador 1")
+        print("\n[END TURN] ---")
+        print(f"[END TURN] Jugador {self.player_number} termina su turno.")
+        print(f"[END TURN] Estado actual antes: {self.state}, Disparo hecho: {self.shot_made}")
 
-        elif self.player_number == 2:
-            self.state = "waiting_for_opponent"
-            # Notificar al jugador 2 que debe esperar
-            print("Turno de espera: Jugador 2")
-
-        # Cambiar la bandera de disparo a False
+        self.state = "waiting_for_opponent"
         self.shot_made = False
 
-        # Enviar el turno al otro jugador (esto podría hacerse a través de la conexión por socket)
-        self.switch_turn()
-
-        # Esperar ataque del oponente si hay conexión
         if self.connection:
-            self.wait_for_opponent_turn()
-
-        # Mostrar el mensaje adecuado al jugador
-        if self.game_over:
-            self.show_game_over()
+            print("[END TURN] Enviando 'turn_ready' al oponente...")
+            self.connection.enviar_datos({
+                "type": "turn_ready"
+            })
         else:
-            self.draw()
+            print("[END TURN] Sin conexión activa.")
+
+        self.draw()
+        print("[END TURN] Estado cambiado a waiting. Redibujado.")
+        print("[END TURN] ---\n")
 
     def reset_shot_flag(self):
         self.shot_made = False

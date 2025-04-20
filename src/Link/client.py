@@ -1,16 +1,11 @@
-from connection import Conexion
+from src.Link.connection import Conexion
 
 def main():
-    # Cambiar modo_servidor a False, ya que el cliente se conecta al servidor
-    red = Conexion(modo_servidor=False, ip="192.168.0.5", puerto=5000)  # Cambia esta IP a la del servidor
+    ip = input("Ingresa la IP del servidor: ")
+    red = Conexion(modo_servidor=False, ip=ip, puerto=5000)
 
-    while True:
-        # Enviar un mensaje al servidor
-        mensaje = input("Escribe un mensaje: ")
-        red.enviar_datos({"mensaje": mensaje})
-
-        # Recibir respuesta del servidor
-        respuesta = red.recibir_datos()
-        print("Servidor dice:", respuesta["mensaje"])
+    red.enviar_datos({"mensaje": "Hola desde el cliente"})
+    respuesta = red.recibir_datos()
+    print("Servidor dice:", respuesta.get("mensaje", "[Sin respuesta]"))
 
 main()

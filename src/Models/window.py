@@ -1,4 +1,7 @@
 import pygame
+import os
+
+
 
 class Window:
     def __init__(self, width, height, title):
@@ -12,7 +15,8 @@ class Window:
         
         self.font = pygame.font.Font(None, 100)
         self.font_button= pygame.font.Font(None, 36)
-        self.back=pygame.image.load("6292.jpg")
+        ruta_imagen = os.path.join(os.path.dirname(__file__), '..', '..', '6292.jpg')
+        self.back = pygame.image.load(os.path.abspath(ruta_imagen))
         self.back = pygame.transform.scale(self.back, (self.width, self.height))
         self.btnPlay = pygame.Rect(350, 250, 100, 50)
         self.btnExit = pygame.Rect(350, 350, 100, 50)
