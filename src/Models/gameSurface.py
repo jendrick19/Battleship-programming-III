@@ -21,7 +21,7 @@ class GameSurface:
         self.backSur = pygame.transform.scale(self.backSur, (self.width, self.height))
         self.font_tittle= pygame.font.Font(None, 36)
         self.show_confirmation = False
-
+        self.option_allow_reshoot = True 
 
         # For playing phase
         self.offset_x1, self.offset_y1 = 50, 100  # Position grid
@@ -59,9 +59,6 @@ class GameSurface:
         self.colorA = (0, 255, 0)
         
         self.error_message = "" 
-
-        
-        
 
         # Estado para selección de barco
         self.selected_ship = None
@@ -148,7 +145,7 @@ class GameSurface:
 
         if self.collision_message and pygame.time.get_ticks() < self.message_timer:
             message = self.font.render(self.collision_message, True, (255, 255, 0))
-            self.surface.blit(message, (self.width // 2 - message.get_width() // 2, 500))
+            self.surface.blit(message, (self.width // 2 - message.get_width() // 2, 475))
 
     def draw_coordinates_button(self):
         # dibujar formato de las coordenadas
@@ -490,7 +487,13 @@ class GameSurface:
     def move_selected_ship(self, direction):
         if not self.selected_ship or self.action_taken:
             return None
-        
+
+        # Verificar si el barco puede moverse según las reglas de daño
+        if not self.can_ship_move(self.selected_ship):
+            self.collision_message = "Daño en el motor"
+            self.message_timer = pygame.time.get_ticks() + 2000
+            return None
+    
         # Guardar las posiciones actuales del barco antes de moverlo
         old_positions = self.selected_ship.position.copy()
         
@@ -503,11 +506,7 @@ class GameSurface:
             
             # Mover el barco
             self.selected_ship.move(direction)
-            
-            # Verificar si alguna parte del barco se ha movido a una posición que ya fue disparada
-            # y marcarla como dañada automáticamente
-            self.check_for_damage_after_move(self.selected_ship)
-            
+    
             # Actualizar el tablero del jugador
             self.update_player_board()
             
@@ -517,42 +516,66 @@ class GameSurface:
             return "ship_moved"
         else:
             # Mostrar mensaje de que no se puede mover
-            self.collision_message = f"No se puede mover el barco en esa dirección"
-            self.message_timer = pygame.time.get_ticks() + 2000  # Mostrar por 2 segundos
+            self.collision_message = "No se puede mover el barco en esa dirección"
+            self.message_timer = pygame.time.get_ticks() + 2000
             return None
     
-    def check_for_damage_after_move(self, ship):
-        """Verifica si alguna parte del barco se ha movido a una posición que ya fue disparada"""
-        # Obtener todas las posiciones que han sido disparadas (hits y misses del oponente)
-        opponent_shots = set()
-        if hasattr(self.opponent, 'hits'):
-            opponent_shots.update(self.opponent.hits)
-        if hasattr(self.opponent, 'misses'):
-            opponent_shots.update(self.opponent.misses)
-        
-        # También incluir las posiciones dañadas registradas
-        opponent_shots.update(self.damaged_positions)
-        
-        # Verificar cada segmento del barco
+    def clear_shots_at_ship_positions(self, ship):
+        """Elimina las posiciones del barco del historial de disparos"""
+        for pos in ship.position:
+            # Eliminar de hits si existe
+            if pos in self.opponent.hits:
+                self.opponent.hits.remove(pos)
+                if pos in self.hits:
+                    self.hits.remove(pos)
+            
+            # Eliminar de misses si existe
+            if pos in self.opponent.misses:
+                self.opponent.misses.remove(pos)
+                if pos in self.misses:
+                    self.misses.remove(pos)
+    
+    def apply_auto_damage_if_hit(self, ship):
+        """Aplica daño automáticamente si un barco se mueve a una posición que fue un hit"""
         for idx, pos in enumerate(ship.position):
-            # Si la posición ya fue disparada, marcar esa parte como dañada
-            if pos in opponent_shots or pos in self.damaged_positions:
+            # Si la posición está en el historial de hits del oponente, aplicar daño
+            if pos in self.opponent.hits:
                 if not ship.damage_positions[idx]:  # Solo si no estaba ya dañada
                     ship.damage_positions[idx] = True
                     ship.life -= 1  # Reducir la vida del barco
                     # Añadir a las posiciones dañadas
                     self.damaged_positions.add(pos)
     
+    def check_for_damage_after_move(self, ship):
+        pass
+    
+    def can_ship_move(self, ship):
+        if ship.life == ship.length:
+            return True
+            
+        # Para barcos de longitud 1, no pueden moverse si están dañados
+        if ship.length == 1:
+            return False
+            
+        # Para barcos más largos, verificar si el daño está en posiciones internas
+        for idx in range(1, ship.length - 1):  # Posiciones internas (1 a length-2)
+            if ship.damage_positions[idx]:
+                return False  # No puede moverse si hay daño en posiciones internas
+            
+        # Si solo hay daño en los extremos, puede moverse
+        return True
+    
     def update_player_board(self):
-        # Limpiar el tablero, pero mantener las posiciones dañadas como 'o'
+        # Limpiar el tablero
         self.player.board.grid = [['w' for _ in range(self.player.board.size)] for _ in range(self.player.board.size)]
         
-        # Marcar las posiciones dañadas como 'o' (fallo)
-        for row, col in self.damaged_positions:
-            if 0 <= row < self.player.board.size and 0 <= col < self.player.board.size:
-                # Solo marcar como 'o' si no hay un barco en esa posición
-                if (row, col) not in [pos for ship in self.player.ships for pos in ship.position]:
-                    self.player.board.grid[row][col] = 'o'
+        # Marcar las posiciones de disparos fallidos como 'o'
+        if hasattr(self.opponent, 'misses'):
+            for row, col in self.opponent.misses:
+                if 0 <= row < self.player.board.size and 0 <= col < self.player.board.size:
+                    # Solo marcar como 'o' si no hay un barco en esa posición
+                    if (row, col) not in [pos for ship in self.player.ships for pos in ship.position]:
+                        self.player.board.grid[row][col] = 'o'
         
         # Actualizar posiciones de los barcos en el tablero
         for ship in self.player.ships:
@@ -569,9 +592,21 @@ class GameSurface:
         if self.action_taken or not self.player or not self.opponent or self.game_over:
             return None
 
-        # Don't allow clicking on already attacked cells
-        if (row, col) in self.hits or (row, col) in self.misses:
-            return None
+        if self.option_allow_reshoot:
+            # Verificar si hay un barco en la posición
+            has_ship = False
+            for ship in self.opponent.ships:
+                if (row, col) in ship.position:
+                    has_ship = True
+                    break
+            
+            # Si no hay barco y ya se disparó a esta posición, no permitir disparar de nuevo
+            if not has_ship and ((row, col) in self.hits or (row, col) in self.misses):
+                return None
+        else:
+            # Comportamiento original: no permitir disparar a posiciones ya atacadas
+            if (row, col) in self.hits or (row, col) in self.misses:
+                return None
 
         # Use Player class to shoot at opponent
         result = self.player.shoot_at_opponent(self.opponent, row, col)
