@@ -9,69 +9,104 @@ from src.Link.connection import Conexion
 from src.Game.player import Player
 from src.Models.ship import Ship
 
+logger = logging.getLogger(__name__)
+
 STATE_SETUP = "setup"
 STATE_PLAYING = "playing"
 STATE_WAITING = "waiting_for_opponent"
 STATE_OVER = "game_over"
 
+
 def do_initial_handshake(connection, current_surface, titulo, modo_servidor):
+    if not connection.connected:
+        logger.error("[HANDSHAKE] La conexión no está activa al iniciar handshake.")
+        return None
     try:
         barcos_serializados = [
             {"length": s.length, "x": s.x, "y": s.y, "isHorizontal": s.isHorizontal}
             for s in current_surface.ships
         ]
+        logger.debug("[HANDSHAKE] Barcos serializados correctamente")
 
         if modo_servidor:
-            # El servidor primero espera al cliente
+            logger.debug("[HANDSHAKE] Modo servidor: esperando al cliente...")
+
             current_surface.status_message = "Esperando barcos del cliente..."
-            current_surface.status_timer = pygame.time.get_ticks() + 10000
+            current_surface.status_timer = pygame.time.get_ticks() + 20000
             data = None
             start = pygame.time.get_ticks()
-            while pygame.time.get_ticks() - start < 10000:
+
+            while pygame.time.get_ticks() - start < 20000:
                 msg = connection.get_mensaje()
                 if msg and msg.get("type") == "player_ready":
+                    logger.debug("[HANDSHAKE] Recibido player_ready del cliente: %s", msg)
                     data = msg
                     break
+
                 current_surface.draw()
                 pygame.display.get_surface().blit(current_surface.surface, (0, 0))
                 pygame.display.flip()
                 pygame.time.wait(100)
 
             if data:
-                # Ahora responde con sus propios barcos
+                logger.debug("[HANDSHAKE] Enviando respuesta player_ready del servidor...")
                 connection.enviar_datos({
                     "type": "player_ready",
                     "name": titulo,
                     "ships": barcos_serializados
                 })
-            return data
+
+                current_surface.status_message = "Turno inicial para ti"
+                current_surface.status_timer = pygame.time.get_ticks() + 3000
+                current_surface.state = "playing"
+
+                logger.debug("[HANDSHAKE] Handshake del servidor completado con éxito.")
+                return data
+            else:
+                logger.warning("[HANDSHAKE] Timeout esperando player_ready del cliente.")
+                current_surface.status_message = "Timeout esperando al cliente"
+                current_surface.status_timer = pygame.time.get_ticks() + 4000
+                return None
 
         else:
-            # Cliente primero envía
+            logger.debug("[HANDSHAKE] Modo cliente: enviando player_ready...")
             connection.enviar_datos({
                 "type": "player_ready",
                 "name": titulo,
                 "ships": barcos_serializados
             })
 
-            # Luego espera la respuesta
             current_surface.status_message = "Esperando confirmación del servidor..."
-            current_surface.status_timer = pygame.time.get_ticks() + 10000
+            current_surface.status_timer = pygame.time.get_ticks() + 20000
             data = None
             start = pygame.time.get_ticks()
-            while pygame.time.get_ticks() - start < 10000:
+
+            while pygame.time.get_ticks() - start < 20000:
                 msg = connection.get_mensaje()
                 if msg and msg.get("type") == "player_ready":
+                    logger.debug("[HANDSHAKE] Recibido player_ready del servidor: %s", msg)
                     data = msg
                     break
+
                 current_surface.draw()
                 pygame.display.get_surface().blit(current_surface.surface, (0, 0))
                 pygame.display.flip()
                 pygame.time.wait(100)
 
-            return data
+            if data:
+                current_surface.state = "waiting_for_opponent"
+                current_surface.status_message = "Esperando turno inicial del servidor..."
+                current_surface.status_timer = pygame.time.get_ticks() + 5000
+                logger.debug("[HANDSHAKE] Handshake del cliente completado con éxito.")
+                return data
+            else:
+                logger.warning("[HANDSHAKE] Timeout esperando player_ready del servidor.")
+                current_surface.status_message = "Timeout esperando al servidor"
+                current_surface.status_timer = pygame.time.get_ticks() + 4000
+                return None
 
     except Exception as e:
+        logger.exception("[HANDSHAKE] Error inesperado durante handshake: %s", e)
         current_surface.status_message = f"Error: {e}"
         current_surface.status_timer = pygame.time.get_ticks() + 5000
         return None
@@ -156,6 +191,9 @@ def game():
         if msg:
             if msg["type"] == "turn_ready":
                 logging.debug("[RED] Se recibió turn_ready, cambiando a PLAYING")
+                current_surface.switch_to_playing()
+            elif msg["type"] == "turn_complete":
+                logging.debug("[RED] Se recibió turn_complete, cambiando a PLAYING")
                 current_surface.switch_to_playing()
             elif msg["type"] == "victory":
                 current_surface.game_over = True
