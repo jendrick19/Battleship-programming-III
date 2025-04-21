@@ -18,6 +18,9 @@ def game():
     current_surface = None
     game_started = False
     mouse_pos = (0, 0)  # Inicializar mouse_pos
+    
+    # Create home button
+    home_btn = pygame.Rect(720, 20, 60, 40)
 
     while execute:
         events = pygame.event.get()
@@ -27,6 +30,12 @@ def game():
 
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 mouse_pos = pygame.mouse.get_pos()
+                
+                # Check if home button was clicked
+                if home_btn.collidepoint(mouse_pos):
+                    current_surface = None
+                    game_started = False
+                    continue
                 
                 if current_surface is None:
                     
@@ -81,6 +90,13 @@ def game():
             current_surface.handle_events(events)
             current_surface.draw()
             window.renderSurface(current_surface.surface)
+            
+            # Draw home button on current surface
+            pygame.draw.rect(window.window, (250, 250, 250), home_btn)
+            font = pygame.font.Font(None, 24)
+            home_text = font.render('Home', True, (0, 0, 0))
+            home_text_rect = home_text.get_rect(center=home_btn.center)
+            window.window.blit(home_text, home_text_rect)
         else:
             window.drawBtns()
 

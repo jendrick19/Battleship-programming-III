@@ -28,6 +28,7 @@ class GameSurface:
         self.offset_x2, self.offset_y2 = 450, 100  # Attack grid
 
         self.font = pygame.font.Font(None, 24)
+        self.coord_font = pygame.font.Font(None, 20)  # Smaller font for coordinates
 
         # State tracking
         self.state = "setup"  # "setup" or "playing"
@@ -133,7 +134,7 @@ class GameSurface:
 
         # Draw title
         title = self.font_tittle.render(self.title, True, self.colorT )
-        title_rect = title.get_rect(center=(self.width // 2, 45))
+        title_rect = title.get_rect(center=(self.width // 2, 25))
         self.surface.blit(title, title_rect)
 
         if self.game_over:
@@ -146,6 +147,17 @@ class GameSurface:
         if self.collision_message and pygame.time.get_ticks() < self.message_timer:
             message = self.font.render(self.collision_message, True, (255, 255, 0))
             self.surface.blit(message, (self.width // 2 - message.get_width() // 2, 475))
+
+    def draw_coordinates(self, offset_x, offset_y):
+        # Draw row labels (A-J)
+        for row in range(self.gridSz):
+            row_label = self.coord_font.render(chr(65 + row), True, (255, 255, 255))
+            self.surface.blit(row_label, (offset_x - 20, offset_y + row * self.cellSz + self.cellSz // 2 - 5))
+        
+        # Draw column labels (1-10)
+        for col in range(self.gridSz):
+            col_label = self.coord_font.render(str(col + 1), True, (255, 255, 255))
+            self.surface.blit(col_label, (offset_x + col * self.cellSz + self.cellSz // 2 - 5, offset_y - 20))
 
     def draw_coordinates_button(self):
         # dibujar formato de las coordenadas
@@ -215,6 +227,9 @@ class GameSurface:
                 rect = pygame.Rect(x, y, self.cellSz, self.cellSz)
                 pygame.draw.rect(self.surface, (6, 190, 225), rect, 2)
 
+        # Draw coordinates
+        self.draw_coordinates(self.offset_x, self.offset_y)
+
         has_collisions = self.has_ship_collisions()
 
         # Draw ships
@@ -243,7 +258,7 @@ class GameSurface:
     def draw_playing(self):
         # Draw position grid
         titlePosit = self.font.render('POSITIONS', True, (255, 255, 255))
-        self.surface.blit(titlePosit, (self.offset_x1 + 110, self.offset_y1 - 30))
+        self.surface.blit(titlePosit, (self.offset_x1 + 110, self.offset_y1 - 50))
 
         for row in range(self.gridSz):
             for col in range(self.gridSz):
@@ -258,6 +273,9 @@ class GameSurface:
                                       (x + self.cellSz // 2, y + self.cellSz // 2),
                                       self.cellSz // 3,
                                       3)
+
+        # Draw coordinates for position grid
+        self.draw_coordinates(self.offset_x1, self.offset_y1)
 
         # Dibujar barcos
         for ship in self.player.ships:
@@ -282,7 +300,7 @@ class GameSurface:
 
         # Draw attack grid
         titleAttck = self.font.render('ATTACK', True, (255, 255, 255))
-        self.surface.blit(titleAttck, (self.offset_x2 + 120, self.offset_y2 - 30))
+        self.surface.blit(titleAttck, (self.offset_x2 + 120, self.offset_y2 - 50))
 
         for row in range(self.gridSz):
             for col in range(self.gridSz):
@@ -308,6 +326,9 @@ class GameSurface:
                                         (x + self.cellSz // 2, y + self.cellSz // 2),
                                         self.cellSz // 3,
                                         3)
+
+        # Draw coordinates for attack grid
+        self.draw_coordinates(self.offset_x2, self.offset_y2)
 
         # Draw end turn button
         button_color = (255, 0, 0) if self.action_taken else (100, 100, 100)

@@ -25,7 +25,7 @@ class Window:
         
         
         title = self.font.render(self.title, True, (255, 255, 255))
-        title_rect = title.get_rect(center=(self.width // 2, 100))
+        title_rect = title.get_rect(center=(self.width // 2, 50))
         self.window.blit(title, title_rect)
         
         pygame.draw.rect(self.window, (255, 0, 0), self.btnPlay)
