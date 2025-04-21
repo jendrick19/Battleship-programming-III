@@ -23,22 +23,22 @@ class GameSurface:
         self.show_confirmation = False
         self.option_allow_reshoot = True 
 
-        # For playing phase
+        # Para fase "jugando"
         self.offset_x1, self.offset_y1 = 50, 100  # Position grid
         self.offset_x2, self.offset_y2 = 450, 100  # Attack grid
 
         self.font = pygame.font.Font(None, 24)
         self.coord_font = pygame.font.Font(None, 20)  # Smaller font for coordinates
 
-        # State tracking
-        self.state = "setup"  # "setup" or "playing"
+        # seguimiento de fases
+        self.state = "setup"  # "setup" o "playing"
         self.player_number = 0
         if "player 1" in title.lower():
             self.player_number = 1
         elif "player 2" in title.lower():
             self.player_number = 2
 
-        # Buttons
+        # botones
         self.btnContinue = pygame.Rect((self.width - 90) // 2, 500, 90, 50)
         self.btnReset = pygame.Rect(340, 400, 120, 50)
         self.btnEndTurn = pygame.Rect((self.width - 90) // 2, 500, 90, 50)
@@ -71,7 +71,7 @@ class GameSurface:
         # Rastreo de posiciones dañadas en el tablero
         self.damaged_positions = set()  # Conjunto de posiciones (row, col) donde se ha dañado un barco
 
-        # Ships for setup
+        # Barcos para la fase de configuración
         self.ships = []
         if self.state == "setup":
             self.ships = [
@@ -82,12 +82,12 @@ class GameSurface:
                 Ship(1, 0, 8, True)
             ]
 
-        # Game objects
+        # Objetos de juego
         self.player = None
         self.opponent = None
         self.game_logic = None
 
-        # UI tracking
+        # seguimiento de usuario y oponente
         self.hits = []
         self.misses = []
         self.shot_made = False
@@ -132,7 +132,7 @@ class GameSurface:
         self.surface.fill((3, 37, 108))
         self.surface.blit(self.backSur,(0,0))
 
-        # Draw title
+        # dibujar el título
         title = self.font_tittle.render(self.title, True, self.colorT )
         title_rect = title.get_rect(center=(self.width // 2, 25))
         self.surface.blit(title, title_rect)
@@ -149,12 +149,12 @@ class GameSurface:
             self.surface.blit(message, (self.width // 2 - message.get_width() // 2, 475))
 
     def draw_coordinates(self, offset_x, offset_y):
-        # Draw row labels (A-J)
+        # Dibujar nombres de filas (A-J)
         for row in range(self.gridSz):
             row_label = self.coord_font.render(chr(65 + row), True, (255, 255, 255))
             self.surface.blit(row_label, (offset_x - 20, offset_y + row * self.cellSz + self.cellSz // 2 - 5))
         
-        # Draw column labels (1-10)
+        # Dibujar nombres de columnas (1-10)
         for col in range(self.gridSz):
             col_label = self.coord_font.render(str(col + 1), True, (255, 255, 255))
             self.surface.blit(col_label, (offset_x + col * self.cellSz + self.cellSz // 2 - 5, offset_y - 20))
@@ -178,19 +178,19 @@ class GameSurface:
             
     def handle_attack_input(self, input_text):
         self.error_message = ""
-        # Validate the input (e.g., "A1", "B5")
+        # Validar input (e.g., "A1", "B5")
         if len(input_text) < 2 or not input_text[0].isalpha() or not input_text[1:].isdigit():
             self.error_message = "Invalid coordinate format!"
             self.active = False
             return self.error_message
 
-        # Convert the input to grid coordinates
-        row = ord(input_text[0].upper()) - ord('A')  # Convert letter to row index
-        col = int(input_text[1:]) - 1  # Convert number to column index
+        # Convertir input a coordenadas de la cuadricula
+        row = ord(input_text[0].upper()) - ord('A')  # Convertir letra a número (A=0, B=1, ...)
+        col = int(input_text[1:]) - 1  # Convertir número a índice (1=0, 2=1, ...)
 
-        # Check if the coordinates are within the grid
+        # Revisar si las coordenadas están dentro de los límites de la cuadrícula
         if 0 <= row < self.gridSz and 0 <= col < self.gridSz:
-            self.handle_attack(None, row, col)  # Call the existing attack logic
+            self.handle_attack(None, row, col)  # Llamar a la función de ataque con las coordenadas
             self.action_taken = True
             self.active = False
         else:
@@ -200,7 +200,7 @@ class GameSurface:
         
 
     def draw_confirmation_dialog(self):
-       # Fondo del cuadroscreen
+       # Fondo del cuadro de confirmación
         pygame.draw.rect(self.surface, (0, 0, 0), (200, 200, 400, 200))
         pygame.draw.rect(self.surface, (255, 255, 255), (200, 200, 400, 200), 2)
 
@@ -213,13 +213,13 @@ class GameSurface:
         pygame.draw.rect(self.surface, (200, 0, 0), self.btnConfirmNo)
 
         yes_text = self.font.render("Yes", True, (255, 255, 255))
-        no_text = self.font.render("Not", True, (255, 255, 255))
+        no_text = self.font.render("No", True, (255, 255, 255))
 
         self.surface.blit(yes_text, self.btnConfirmYes.move(28, 12))
         self.surface.blit(no_text, self.btnConfirmNo.move(28, 12))
 
     def draw_setup(self):
-        # Draw grid
+        # Dibujar cuadrícula de posiciones
         for row in range(self.gridSz):
             for col in range(self.gridSz):
                 x = self.offset_x + col * self.cellSz
@@ -227,16 +227,16 @@ class GameSurface:
                 rect = pygame.Rect(x, y, self.cellSz, self.cellSz)
                 pygame.draw.rect(self.surface, (6, 190, 225), rect, 2)
 
-        # Draw coordinates
+        # Dibujar coordinadas para la cuadrícula de posiciones
         self.draw_coordinates(self.offset_x, self.offset_y)
 
         has_collisions = self.has_ship_collisions()
 
-        # Draw ships
+        # Dibujar barcos
         for ship in self.ships:
             ship.draw(self.surface, self.offset_x, self.offset_y, self.cellSz)
 
-        # Draw buttons
+        # Dibujar botones de continuar
         button_color = (100, 100, 100) if has_collisions else (0, 200, 0) # Cambiado a verde si no hay colisiones
         pygame.draw.rect(self.surface, button_color, self.btnContinue)
 
@@ -244,7 +244,7 @@ class GameSurface:
         rectContinue = textContinue.get_rect(center=self.btnContinue.center)
         self.surface.blit(textContinue, rectContinue)
 
-        # Instructions
+        # Instrucciones de rotación
         textRotate = self.font.render('Press SPACE while dragging to rotate', True, (255, 255, 255))
         self.surface.blit(textRotate, (self.offset_x, self.offset_y + self.gridSz * self.cellSz + 10))
 
@@ -256,7 +256,7 @@ class GameSurface:
             self.draw_confirmation_dialog()
 
     def draw_playing(self):
-        # Draw position grid
+        # Dibujar cuadrícula de posiciones
         titlePosit = self.font.render('POSITIONS', True, (255, 255, 255))
         self.surface.blit(titlePosit, (self.offset_x1 + 110, self.offset_y1 - 50))
 
@@ -274,7 +274,7 @@ class GameSurface:
                                       self.cellSz // 3,
                                       3)
 
-        # Draw coordinates for position grid
+        # Dibujar coordenadas para la cuadrícula de posiciones
         self.draw_coordinates(self.offset_x1, self.offset_y1)
 
         # Dibujar barcos
@@ -298,7 +298,7 @@ class GameSurface:
                     
                 pygame.draw.rect(self.surface, color, rect)
 
-        # Draw attack grid
+        # Dibujar cuadrícula de ataque
         titleAttck = self.font.render('ATTACK', True, (255, 255, 255))
         self.surface.blit(titleAttck, (self.offset_x2 + 120, self.offset_y2 - 50))
 
@@ -309,7 +309,7 @@ class GameSurface:
                 rect = pygame.Rect(x, y, self.cellSz, self.cellSz)
                 pygame.draw.rect(self.surface, (6, 190, 225), rect, 2)
 
-                # Draw hits (red X)
+                # Dibujar hits (X roja)
                 if (row, col) in self.hits:
                     pygame.draw.line(self.surface, (255, 0, 0),
                                      (x + 5, y + 5),
@@ -320,17 +320,17 @@ class GameSurface:
                                      (x + 5, y + self.cellSz - 5),
                                      3)
 
-                # Draw misses (white circle)
+                # Dibujar misses (círculo blanco)
                 if (row, col) in self.misses:
                     pygame.draw.circle(self.surface, (255, 255, 255),
                                         (x + self.cellSz // 2, y + self.cellSz // 2),
                                         self.cellSz // 3,
                                         3)
 
-        # Draw coordinates for attack grid
+        # Dibujar coordinadas para la cuadrícula de ataque
         self.draw_coordinates(self.offset_x2, self.offset_y2)
 
-        # Draw end turn button
+        # Dibujar boton de finalizar turno
         button_color = (255, 0, 0) if self.action_taken else (100, 100, 100)
         pygame.draw.rect(self.surface, button_color, self.btnEndTurn)
 
@@ -471,7 +471,7 @@ class GameSurface:
                     if position_rect.collidepoint(mouse_pos):
                         return self.handle_ship_selection(row, col)
             
-            # Check if the click is on the attack grid
+            # Verificar si se hizo clic en el tablero de ataque
             for row in range(self.gridSz):
                 for col in range(self.gridSz):
                     x = self.offset_x2 + col * self.cellSz
@@ -482,7 +482,7 @@ class GameSurface:
                         self.selected_ship = None
                         return self.handle_attack(mouse_pos, row, col)
 
-            # Check if the click is on the End Turn button
+            # revisar si se hizo clic en el botón de finalizar turno
             if self.btnEndTurn.collidepoint(mouse_pos):
                 if self.action_taken or self.game_over:
                     # Deseleccionar barco al finalizar turno
@@ -595,7 +595,7 @@ class GameSurface:
                         self.player.board.grid[row][col] = 's'  # Parte intacta del barco
 
     def handle_attack(self, mouse_pos, row, col):
-        # Don't allow shooting if a shot has already been made this turn
+        # no permitir disparar si ya se realizó una acción o si el juego ha terminado
         if self.action_taken or not self.player or not self.opponent or self.game_over:
             return None
 
@@ -615,7 +615,7 @@ class GameSurface:
             if (row, col) in self.hits or (row, col) in self.misses:
                 return None
 
-        # Use Player class to shoot at opponent
+        # usar clase jugador para disparar a el oponente
         result = self.player.shoot_at_opponent(self.opponent, row, col)
 
         if result == "Disparo exitoso":
@@ -631,13 +631,13 @@ class GameSurface:
         else:
             self.misses.append((row, col))
 
-        # Check for win condition using GameLogic
+        # revisar si se ha ganado
         victory_message = self.game_logic.check_victory()
         if victory_message:
             self.game_over = True
             self.winner = f"Player {self.player_number}"
 
-        # Set the action_taken flag to true
+        # actualizar variable de accion realizada
         self.action_taken = True
         self.shot_made = True
         return "shot_made"

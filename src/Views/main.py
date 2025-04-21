@@ -19,7 +19,7 @@ def game():
     game_started = False
     mouse_pos = (0, 0)  # Inicializar mouse_pos
     
-    # Create home button
+    # Crear boton home
     home_btn = pygame.Rect(720, 20, 60, 40)
 
     while execute:
@@ -31,10 +31,9 @@ def game():
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 mouse_pos = pygame.mouse.get_pos()
                 
-                # Check if home button was clicked
+                # Revisar si se hizo clic en el botón home
                 if home_btn.collidepoint(mouse_pos):
-                    current_surface = None
-                    game_started = False
+                    game()
                     continue
                 
                 if current_surface is None:
@@ -56,11 +55,11 @@ def game():
                                 current_surface = surfacePlayer2
                         elif current_surface == surfacePlayer2:
                             if current_surface.setup_player("Player 2"):
-                                # Set up opponents
+                                # Setear oponentes
                                 surfacePlayer1.setup_opponent(surfacePlayer2.player)
                                 surfacePlayer2.setup_opponent(surfacePlayer1.player)
                                 
-                                # Switch to playing mode
+                                # Cambiar a modo de juego
                                 surfacePlayer1.switch_to_playing()
                                 surfacePlayer2.switch_to_playing()
                                 
@@ -91,7 +90,7 @@ def game():
             current_surface.draw()
             window.renderSurface(current_surface.surface)
             
-            # Draw home button on current surface
+            # Dibujar boton home en la ventana
             pygame.draw.rect(window.window, (250, 250, 250), home_btn)
             font = pygame.font.Font(None, 24)
             home_text = font.render('Home', True, (0, 0, 0))
