@@ -45,10 +45,10 @@ class GameSurface:
         self.btnConfirmNo = pygame.Rect(410, 300, 80, 40)
         
         # Botones para mover barcos
-        self.btnMoveUp = pygame.Rect(100, 450, 40, 40)
-        self.btnMoveDown = pygame.Rect(100, 550, 40, 40)
-        self.btnMoveLeft = pygame.Rect(60, 500, 40, 40)
-        self.btnMoveRight = pygame.Rect(140, 500, 40, 40)
+        self.btnMoveUp = pygame.Rect(60, 450, 40, 40)
+        self.btnMoveDown = pygame.Rect(60, 550, 40, 40)
+        self.btnMoveLeft = pygame.Rect(20, 500, 40, 40)
+        self.btnMoveRight = pygame.Rect(100, 500, 40, 40)
         
         # Boton para disparar
         self.btncoords = pygame.Rect(580, 450, 160, 40)
@@ -193,18 +193,18 @@ class GameSurface:
         pygame.draw.rect(self.surface, (255, 255, 255), (200, 200, 400, 200), 2)
 
         # Texto
-        text = self.font.render("¿Estás seguro de tus posiciones?", True, (255, 255, 255))
+        text = self.font.render("Are you sure of your positions?", True, (255, 255, 255))
         self.surface.blit(text, (self.width // 2 - text.get_width() // 2, 230))
 
         # Botones
         pygame.draw.rect(self.surface, (0, 200, 0), self.btnConfirmYes)
         pygame.draw.rect(self.surface, (200, 0, 0), self.btnConfirmNo)
 
-        yes_text = self.font.render("Sí", True, (255, 255, 255))
-        no_text = self.font.render("No", True, (255, 255, 255))
+        yes_text = self.font.render("Yes", True, (255, 255, 255))
+        no_text = self.font.render("Not", True, (255, 255, 255))
 
-        self.surface.blit(yes_text, self.btnConfirmYes.move(30, 12))
-        self.surface.blit(no_text, self.btnConfirmNo.move(30, 12))
+        self.surface.blit(yes_text, self.btnConfirmYes.move(28, 12))
+        self.surface.blit(no_text, self.btnConfirmNo.move(28, 12))
 
     def draw_setup(self):
         # Draw grid
@@ -272,11 +272,11 @@ class GameSurface:
                 
                 # Color según estado: dañado, seleccionado o normal
                 if ship.damage_positions[i]:
-                    color = (255, 0, 0)  # Rojo para partes dañadas
+                    color = (255, 0, 0)
                 elif is_selected:
-                    color = (0, 255, 0)  # Verde para barco seleccionado
+                    color = (0, 255, 0)
                 else:
-                    color = (0, 0, 0)    # Negro para barcos normales
+                    color = (0, 0, 0)
                     
                 pygame.draw.rect(self.surface, color, rect)
 
@@ -325,33 +325,33 @@ class GameSurface:
             # Botón arriba
             pygame.draw.rect(self.surface, (0, 150, 255), self.btnMoveUp)
             pygame.draw.polygon(self.surface, (255, 255, 255), 
-                               [(100 + 20, 450 + 10), (100 + 10, 450 + 30), (100 + 30, 450 + 30)])
+                               [(60 + 20, 450 + 10), (60 + 10, 450 + 30), (60 + 30, 450 + 30)])
             
             # Botón abajo
             pygame.draw.rect(self.surface, (0, 150, 255), self.btnMoveDown)
             pygame.draw.polygon(self.surface, (255, 255, 255), 
-                               [(100 + 20, 550 + 30), (100 + 10, 550 + 10), (100 + 30, 550 + 10)])
+                               [(60 + 20, 550 + 30), (60 + 10, 550 + 10), (60 + 30, 550 + 10)])
             
             # Botón izquierda
             pygame.draw.rect(self.surface, (0, 150, 255), self.btnMoveLeft)
             pygame.draw.polygon(self.surface, (255, 255, 255), 
-                               [(60 + 10, 500 + 20), (60 + 30, 500 + 10), (60 + 30, 500 + 30)])
+                               [(20 + 10, 500 + 20), (20 + 30, 500 + 10), (20 + 30, 500 + 30)])
             
             # Botón derecha
             pygame.draw.rect(self.surface, (0, 150, 255), self.btnMoveRight)
             pygame.draw.polygon(self.surface, (255, 255, 255), 
-                               [(140 + 30, 500 + 20), (140 + 10, 500 + 10), (140 + 10, 500 + 30)])
+                               [(100 + 30, 500 + 20), (100 + 10, 500 + 10), (100 + 10, 500 + 30)])
             
             # Instrucciones para mover barcos
-            move_text = self.font.render("Move your selected ship", True, (255, 255, 255))
-            self.surface.blit(move_text, (10, 430))
+            move_text = self.font.render("Move your ship", True, (255, 255, 255))
+            self.surface.blit(move_text, (20, 430))
 
         # Display game status
         if self.player and self.opponent:
             ships_sunk = sum(1 for ship in self.opponent.ships if ship.check_sunken_ship())
             total_ships = len(self.opponent.ships)
             status_text = self.font.render(f"Ships sunk: {ships_sunk}/{total_ships}", True, (255, 255, 255))
-            self.surface.blit(status_text, (600, 545))
+            self.surface.blit(status_text, (670, 545))
 
             # Display turn status
             if self.action_taken:
@@ -490,7 +490,7 @@ class GameSurface:
 
         # Verificar si el barco puede moverse según las reglas de daño
         if not self.can_ship_move(self.selected_ship):
-            self.collision_message = "Daño en el motor"
+            self.collision_message = "Engine damage. You can't move"
             self.message_timer = pygame.time.get_ticks() + 2000
             return None
     
@@ -516,7 +516,7 @@ class GameSurface:
             return "ship_moved"
         else:
             # Mostrar mensaje de que no se puede mover
-            self.collision_message = "No se puede mover el barco en esa dirección"
+            self.collision_message = "The ship cannot be moved in this direction"
             self.message_timer = pygame.time.get_ticks() + 2000
             return None
     
@@ -534,20 +534,6 @@ class GameSurface:
                 self.opponent.misses.remove(pos)
                 if pos in self.misses:
                     self.misses.remove(pos)
-    
-    def apply_auto_damage_if_hit(self, ship):
-        """Aplica daño automáticamente si un barco se mueve a una posición que fue un hit"""
-        for idx, pos in enumerate(ship.position):
-            # Si la posición está en el historial de hits del oponente, aplicar daño
-            if pos in self.opponent.hits:
-                if not ship.damage_positions[idx]:  # Solo si no estaba ya dañada
-                    ship.damage_positions[idx] = True
-                    ship.life -= 1  # Reducir la vida del barco
-                    # Añadir a las posiciones dañadas
-                    self.damaged_positions.add(pos)
-    
-    def check_for_damage_after_move(self, ship):
-        pass
     
     def can_ship_move(self, ship):
         if ship.life == ship.length:
