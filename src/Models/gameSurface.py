@@ -145,6 +145,42 @@ class GameSurface:
             status = self.font.render(self.status_message, True, self.status_color)
             self.surface.blit(status, (self.width // 2 - status.get_width() // 2, 460))
 
+        # Dibujar hits - CORREGIDA LA INDENTACIÓN
+        if hasattr(self, 'hits') and self.hits:
+            for hit in self.hits:
+                row, col = hit
+                x = self.offset_x2 + col * self.cellSz
+                y = self.offset_y2 + row * self.cellSz
+                # Dibujar un rectángulo rojo más grande y visible
+                pygame.draw.rect(self.surface, (255, 0, 0), pygame.Rect(x+2, y+2, self.cellSz-4, self.cellSz-4))
+                # Dibujar una X blanca encima para mayor contraste
+                pygame.draw.line(self.surface, (255, 255, 255), (x + 5, y + 5), 
+                                (x + self.cellSz - 5, y + self.cellSz - 5), 2)
+                pygame.draw.line(self.surface, (255, 255, 255), (x + self.cellSz - 5, y + 5), 
+                                (x + 5, y + self.cellSz - 5), 2)
+                #logger.debug(f"[DRAW] Dibujando hit en ({row},{col}) en posición ({x},{y})")
+        
+        # Dibujar misses
+        if hasattr(self, 'misses') and self.misses:
+            for miss in self.misses:
+                row, col = miss
+                x = self.offset_x2 + col * self.cellSz
+                y = self.offset_y2 + row * self.cellSz
+                # Dibujar un círculo azul más visible
+                pygame.draw.circle(self.surface, (0, 0, 255), 
+                                (x + self.cellSz // 2, y + self.cellSz // 2), 
+                                self.cellSz // 3, 0)  # Relleno
+                # Borde blanco para mayor contraste
+                pygame.draw.circle(self.surface, (255, 255, 255), 
+                                (x + self.cellSz // 2, y + self.cellSz // 2), 
+                                self.cellSz // 3, 2)  # Borde
+                #logger.debug(f"[DRAW] Dibujando miss en ({row},{col}) en posición ({x},{y})")
+        
+        # Depuración de hits y misses - AÑADIDO PARA VERIFICAR
+        if hasattr(self, 'hits') and hasattr(self, 'misses') and (self.hits or self.misses):
+            debug_text = f"Hits: {self.hits}, Misses: {self.misses}"
+            debug_surf = self.font.render(debug_text, True, (255, 255, 0))
+            self.surface.blit(debug_surf, (10, 10))
     def draw_confirmation_dialog(self):
        # Fondo del cuadro
         pygame.draw.rect(self.surface, (0, 0, 0), (200, 200, 400, 200))
@@ -198,75 +234,49 @@ class GameSurface:
         if self.show_confirmation:
             self.draw_confirmation_dialog()
 
-    def draw_playing(self):
-        # Tablero de posiciones (izquierda)
-        titlePosit = self.font.render('POSITIONS', True, (255, 255, 255))
-        self.surface.blit(titlePosit, (self.offset_x1 + 110, self.offset_y1 - 30))
+        if hasattr(self, 'status_message') and pygame.time.get_ticks() < self.status_timer:
+            status = self.font.render(self.status_message, True, self.status_color)
+            self.surface.blit(status, (self.width // 2 - status.get_width() // 2, 550))
 
+        # Botón End Turn
+        if self.state == "playing":
+            color_btn = (100, 200, 100) if self.shot_made else (100, 100, 100)
+            pygame.draw.rect(self.surface, color_btn, self.btnEndTurn)
+            btn_text = self.font.render("End Turn", True, (0, 0, 0))
+            self.surface.blit(btn_text, btn_text.get_rect(center=self.btnEndTurn.center))
+
+    def draw_playing(self):
+        logger = logging.getLogger(__name__)
+        
+        # Dibujar tablero del jugador (izquierda)
         for row in range(self.gridSz):
             for col in range(self.gridSz):
                 x = self.offset_x1 + col * self.cellSz
                 y = self.offset_y1 + row * self.cellSz
                 rect = pygame.Rect(x, y, self.cellSz, self.cellSz)
-                pygame.draw.rect(self.surface, (6, 190, 225), rect, 2)
-                if self.player and (row, col) in [pos for ship in self.player.ships for pos in ship.position]:
-                    pygame.draw.rect(self.surface, (0, 0, 0), rect)
+                pygame.draw.rect(self.surface, (0, 0, 0), rect, 1)
+                if self.player and self.player.board.grid[row][col] == 's':
+                    pygame.draw.rect(self.surface, (255, 255, 255), rect)  # barcos propios
+                elif self.player and self.player.board.grid[row][col] == 'x':
+                    pygame.draw.line(self.surface, (255, 0, 0), (x, y), (x + self.cellSz, y + self.cellSz), 2)
+                    pygame.draw.line(self.surface, (255, 0, 0), (x + self.cellSz, y), (x, y + self.cellSz), 2)
+                elif self.player and self.player.board.grid[row][col] == 'o':
+                    pygame.draw.circle(self.surface, (0, 0, 255), (x + self.cellSz//2, y + self.cellSz//2), self.cellSz//3)
 
-        # Tablero de ataque (derecha)
-        titleAttck = self.font.render('ATTACK', True, (255, 255, 255))
-        self.surface.blit(titleAttck, (self.offset_x2 + 120, self.offset_y2 - 30))
-
+        # Dibujar tablero del oponente (derecha)
         for row in range(self.gridSz):
             for col in range(self.gridSz):
                 x = self.offset_x2 + col * self.cellSz
                 y = self.offset_y2 + row * self.cellSz
                 rect = pygame.Rect(x, y, self.cellSz, self.cellSz)
-                pygame.draw.rect(self.surface, (6, 190, 225), rect, 2)
+                pygame.draw.rect(self.surface, (0, 0, 0), rect, 1)
 
-                if (row, col) in self.hits:
-                    print("[DEBUG] Hits actuales:", self.hits)
-                    pygame.draw.line(self.surface, (255, 0, 0), (x + 5, y + 5), (x + self.cellSz - 5, y + self.cellSz - 5), 3)
-                    pygame.draw.line(self.surface, (255, 0, 0), (x + self.cellSz - 5, y + 5), (x + 5, y + self.cellSz - 5), 3)
-
-                if (row, col) in self.misses:
-                    pygame.draw.circle(self.surface, (255, 255, 255), (x + self.cellSz // 2, y + self.cellSz // 2), self.cellSz // 3, 3)
-
-        # Botón End Turn y mensajes según el estado
-        if self.state == "waiting_for_opponent":
-            pygame.draw.rect(self.surface, (100, 100, 100), self.btnEndTurn)
-            textWaiting = self.font.render("Esperando...", True, (200, 200, 200))
-            self.surface.blit(textWaiting, self.btnEndTurn.move(15, 10))
-            status = self.font.render("Esperando el turno del oponente...", True, (255, 255, 0))
-            self.surface.blit(status, (280, 410))
-        else:
-            pygame.draw.rect(self.surface, (255, 0, 0) if self.shot_made else (100, 100, 100), self.btnEndTurn)
-            textEndTurn = self.font.render('End Turn', True, (255, 255, 255))
-            self.surface.blit(textEndTurn, self.btnEndTurn.move(10, 10))
-
-            if not self.shot_made:
-                turno_msg = self.font.render("Es tu turno", True, (0, 255, 0))
-                self.surface.blit(turno_msg, (320, 410))
-
-        # Estado del disparo
-        if self.state == "playing":
-            if self.shot_made:
-                turn_status = self.font.render("Shot made! Click End Turn", True, (255, 255, 0))
-                self.surface.blit(turn_status, (300, 450))
-            else:
-                turn_status = self.font.render("Make your shot", True, (255, 255, 255))
-                self.surface.blit(turn_status, (340, 450))
-
-            if self.last_result_message and pygame.time.get_ticks() - self.last_result_time < 3000:
-                color = (255, 0, 0) if "X" in self.last_result_message else (255, 255, 255)
-                result_text = self.font.render(self.last_result_message, True, color)
-                self.surface.blit(result_text, (self.width // 2 - result_text.get_width() // 2, 480))
-
-        # Barcos hundidos
-        if self.player and self.opponent:
-            ships_sunk = sum(1 for ship in self.opponent.ships if ship.check_sunken_ship())
-            total_ships = len(self.opponent.ships)
-            status_text = self.font.render(f"Ships sunk: {ships_sunk}/{total_ships}", True, (255, 255, 255))
-            self.surface.blit(status_text, (600, 545))
+        # Dibujar botón de end turn si es tu turno y ya disparaste
+        if self.shot_made and not self.game_over:
+            pygame.draw.rect(self.surface, (0, 128, 0), self.btnEndTurn)
+            text = self.font.render("End Turn", True, (255, 255, 255))
+            self.surface.blit(text, text.get_rect(center=self.btnEndTurn.center))
+            #logger.debug("[DRAW] Mostrando botón 'End Turn' porque el disparo ya fue hecho.")
 
 
     def draw_game_over(self):
@@ -290,16 +300,21 @@ class GameSurface:
 
         elif self.state == "playing":
             for event in events:
-                if event.type == pygame.MOUSEBUTTONDOWN:
+                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                     mouse_pos = pygame.mouse.get_pos()
                     action = self.handle_click(mouse_pos)
-                    if action == "end_turn" and self.shot_made:
+                    logger.debug(f"[EVENTS] Click en {mouse_pos}, acción: {action}")
+                    if action == "shot_made":
+                        logger.debug("[EVENTS] Disparo realizado")
+                        # No hacer nada más, esperar resultado
+                    elif action == "end_turn" and self.shot_made:
+                        logger.debug("[EVENTS] Finalizando turno")
                         self.end_turn()
 
 
     def handle_click(self, mouse_pos):
-        logger = logging.getLogger(__name__)  # Asegúrate de tener esto aquí
-
+        logger = logging.getLogger(__name__)
+        
         if self.show_confirmation:
             if self.btnConfirmYes.collidepoint(mouse_pos):
                 self.show_confirmation = False
@@ -316,14 +331,6 @@ class GameSurface:
         elif self.state == "playing":
             logger.debug(f"[DEBUG] Estado actual en clic: {self.state}, shot_made: {self.shot_made}")
 
-            if not self.connection or not self.connection.connected:
-                logger.debug("[DEBUG] Conexión no activa en clic.")
-                return None
-
-            if self.shot_made:
-                logger.debug("[DEBUG] Ya hiciste un disparo este turno.")
-                return None
-
             # Check if the click is on the attack grid
             for row in range(self.gridSz):
                 for col in range(self.gridSz):
@@ -332,15 +339,17 @@ class GameSurface:
                     attack_rect = pygame.Rect(x, y, self.cellSz, self.cellSz)
                     if attack_rect.collidepoint(mouse_pos):
                         logger.debug(f"[DEBUG] Click detectado en ataque: fila {row}, col {col}")
-                        return self.handle_attack(mouse_pos, row, col)
+                        # Solo procesar el ataque si estamos en estado playing y no hemos disparado aún
+                        if not self.shot_made:
+                            return self.handle_attack(mouse_pos, row, col)
+                        else:
+                            logger.debug("[DEBUG] Ya se realizó un disparo este turno")
+                            return None
 
             # Check if click was on End Turn button
-            if self.btnEndTurn.collidepoint(mouse_pos):
-                if self.shot_made or self.game_over:
-                    logger.debug("[DEBUG] Clic en End Turn válido.")
-                    return "end_turn"
-                else:
-                    logger.debug("[DEBUG] End Turn presionado sin haber disparado.")
+            if self.btnEndTurn.collidepoint(mouse_pos) and self.shot_made:
+                logger.debug("[DEBUG] Clic en End Turn válido.")
+                return "end_turn"
 
         return None
 
@@ -365,44 +374,27 @@ class GameSurface:
             return None
 
         try:
+            # Enviar el ataque
             self.connection.enviar_datos({"type": "attack", "row": row, "col": col})
             logger.debug("[ATTACK] Ataque enviado correctamente.")
-
-            start = time.time()
-            while time.time() - start < 3:
-                ready, _, _ = select.select([self.connection.canal], [], [], 0.1)
-                if ready:
-                    datos = self.connection.canal.recv(self.connection.bufsize).decode("utf-8")
-                    if not datos:
-                        logger.error("[ATTACK] No hay datos, se cerró la conexión.")
-                        return None
-
-                    self._recv_buffer += datos
-                    while '\n' in self._recv_buffer:
-                        raw, self._recv_buffer = self._recv_buffer.split('\n', 1)
-                        msg = json.loads(raw)
-                        logger.debug(f"[ATTACK] Mensaje recibido en ataque: {msg}")
-
-                        if msg.get("type") == "result":
-                            if msg["result"] == "Disparo exitoso":
-                                self.hits.append((row, col))
-                                self.last_result_message = "X ¡Le diste!"
-                            else:
-                                self.misses.append((row, col))
-                                self.last_result_message = "O Fallaste"
-
-                            self.shot_made = True
-                            self.last_result_time = pygame.time.get_ticks()
-                            self.draw()
-                            return "shot_made"
-            logger.warning("[ATTACK] Timeout esperando resultado.")
-            return None
-
+            
+            # Marcar que ya se realizó un disparo este turno
+            self.shot_made = True
+            
+            # Actualizar la interfaz para mostrar que se está esperando respuesta
+            self.status_message = "Esperando resultado..."
+            self.status_timer = pygame.time.get_ticks() + 5000
+            self.status_color = (255, 255, 0)
+            
+            # Forzar actualización de la pantalla
+            self.force_update()
+            
+            self.debug_state()
+            return "shot_made"
         except Exception as e:
             logger.exception("[ATTACK] Excepción durante el ataque.")
             return None
-
-        
+            
     def wait_for_opponent_turn(self):
 
         logger = logging.getLogger(__name__)
@@ -439,37 +431,47 @@ class GameSurface:
             self.status_timer = pygame.time.get_ticks() + 3000
             self.status_color = (255, 0, 0)
             self._cerrar_por_desconexion(f"Error de red: {e}")
+        
+        if self.hits or self.misses:
+            self.draw()
+            pygame.display.update()
 
     def _procesar_mensaje_red(self, msg):
         logger = logging.getLogger(__name__)
+        logger.debug(f"[RED] Mensaje recibido: {msg}")
 
         if not isinstance(msg, dict) or "type" not in msg:
-            logger.warning("[RED] Paquete inválido: %s", msg)
+            logger.warning("[RED] Mensaje no válido recibido: %s", msg)
             return
-
-        logger.debug(f"[RED] Mensaje recibido: {msg}")
 
         if msg["type"] == "ping":
             self.connection.enviar_datos({"type": "pong"})
 
-        elif msg["type"] == "pong":
-            logger.debug("[RED] Pong recibido.")
-
         elif msg["type"] == "turn_ready":
-            self.state = "playing"
             logger.debug("[RED] Turno recibido, es tu turno ahora.")
+            self.switch_to_playing()
+
+        elif msg["type"] == "turn_complete":
+            logger.debug("[RED] Turno del oponente finalizado. Es tu turno ahora.")
+            self.switch_to_playing()
 
         elif msg["type"] == "attack":
-            row, col = msg.get("row"), msg.get("col")
+            if not all(k in msg for k in ("row", "col")):
+                logger.warning("[RED] Paquete 'attack' incompleto.")
+                return
+
+            row, col = msg["row"], msg["col"]
             logger.debug(f"[RED] Ataque recibido en ({row},{col})")
 
             if not self.player or not self.opponent:
-                logger.error("[RED] Jugadores no definidos.")
-                self._cerrar_por_desconexion("Estado inválido")
+                logger.error("[RED] Estado inválido, player u opponent son None.")
+                self._cerrar_por_desconexion("Estado inválido.")
                 return
 
             try:
-                result = self.player.shoot_at_opponent(self.opponent, row, col)
+                # Usar correctamente el método shoot_at_opponent
+                # El jugador actual (self.player) dispara al oponente (self.opponent)
+                result = self.opponent.shoot_at_opponent(self.player, row, col)
                 logger.debug(f"[RED] Resultado del disparo: {result}")
 
                 self.connection.enviar_datos({
@@ -479,26 +481,31 @@ class GameSurface:
                     "col": col
                 })
 
-                if self.game_logic.check_victory():
+                victoria = self.opponent.all_ships_sunken()
+                if victoria:
                     self.game_over = True
-                    self.winner = f"Player {3 - self.player_number}"
+                    self.winner = f"Player {self.player_number}"
                     self.connection.enviar_datos({
                         "type": "victory",
-                        "winner": 3 - self.player_number
+                        "winner": self.player_number
                     })
                 else:
                     self.shot_made = False
                     self.state = "waiting_for_opponent"
 
             except Exception as e:
-                logger.exception("[RED] Error al manejar ataque")
+                logger.exception("[RED] Error al procesar ataque")
 
         elif msg["type"] == "result":
-            logger.debug(f"[RESULT] Procesando resultado recibido: {msg}")
+            logger.debug(f"[RESULT] Resultado recibido: {msg}")
             row, col = msg.get("row"), msg.get("col")
-            resultado = msg.get("result")
+            result = msg.get("result")
 
-            if resultado == "Disparo exitoso":
+            if row is None or col is None:
+                logger.warning("[RESULT] Falta coordenada en el mensaje result.")
+                return
+
+            if result == "Disparo exitoso":
                 self.hits.append((row, col))
                 self.last_result_message = "X ¡Le diste!"
             else:
@@ -507,30 +514,50 @@ class GameSurface:
 
             self.last_result_time = pygame.time.get_ticks()
             self.shot_made = True
-            self.draw()
-            logger.debug(f"[RESULT] Resultado dibujado: {self.last_result_message} en ({row},{col})")
+            logger.debug(f"[RESULT] Se actualizó hits/misses: {self.hits=} {self.misses=}")
+            self.draw()  # para asegurar que se muestre el impacto
 
         elif msg["type"] == "victory":
             self.game_over = True
             self.winner = f"Player {msg['winner']}"
             self.state = "game_over"
-            logger.info(f"[VICTORY] Victoria de Player {msg['winner']}")
+            logger.info(f"[VICTORY] El ganador es Player {msg['winner']}")
 
-
+                
     def end_turn(self):
-        import logging
         logger = logging.getLogger(__name__)
 
+        if not self.connection or not self.connection.connected:
+            logger.warning("[END TURN] No hay conexión activa.")
+            return
+
+        if not self.shot_made:
+            logger.warning("[END TURN] Intento de finalizar turno sin disparar.")
+            self.status_message = "¡Debes hacer un disparo primero!"
+            self.status_timer = pygame.time.get_ticks() + 3000
+            self.status_color = (255, 0, 0)
+            return
+
         try:
+            logger.debug("[END TURN] Enviando 'turn_complete' al oponente...")
             self.connection.enviar_datos({"type": "turn_complete"})
-            logger.debug("[END TURN] Enviado turn_complete")
+
+            # Cambiar estado local
             self.state = "waiting_for_opponent"
             self.shot_made = False
-            self.draw()
+
+            # Mensaje en pantalla
+            self.status_message = "Esperando turno del oponente..."
+            self.status_color = (255, 255, 0)
+            self.status_timer = pygame.time.get_ticks() + 5000
+
+            logger.debug("[END TURN] Turno finalizado, esperando oponente.")
+
         except Exception as e:
-            logger.error(f"[END TURN] Error: {e}")
-            self.status_message = "Error al terminar turno"
-            self.status_timer = pygame.time.get_ticks() + 3000
+            logger.exception("[END TURN] Error al finalizar turno.")
+            self.status_message = "Error de red al finalizar turno."
+            self.status_color = (255, 0, 0)
+            self.status_timer = pygame.time.get_ticks() + 5000
         
     def _cerrar_por_desconexion(self, motivo="Desconexión"):
         self.state = "disconnected"
@@ -542,3 +569,61 @@ class GameSurface:
 
     def reset_shot_flag(self):
         self.shot_made = False
+
+    def debug_state(self):
+        """Imprime el estado actual del juego para depuración"""
+        logger = logging.getLogger(__name__)
+        logger.debug("=== ESTADO DEL JUEGO ===")
+        logger.debug(f"Estado: {self.state}")
+        logger.debug(f"Shot made: {self.shot_made}")
+        logger.debug(f"Hits: {self.hits}")
+        logger.debug(f"Misses: {self.misses}")
+        logger.debug(f"Último resultado: {self.last_result_message}")
+        logger.debug("=====================")
+
+    def force_update(self):
+        """Fuerza una actualización completa de la pantalla"""
+        self.draw()
+        pygame.display.update()
+        logger.debug("[UPDATE] Forzando actualización de pantalla")
+
+    def procesar_resultado(self, row, col, resultado):
+        """Procesa directamente un resultado de ataque y actualiza la interfaz"""
+        logger = logging.getLogger(__name__)
+        
+        # Convertir a enteros si es necesario
+        try:
+            row = int(row)
+            col = int(col)
+        except (TypeError, ValueError):
+            logger.error(f"[RESULT] Valores inválidos para row/col: {row}/{col}")
+            return
+        
+        # Inicializar arrays si no existen
+        if not hasattr(self, 'hits') or self.hits is None:
+            self.hits = []
+        if not hasattr(self, 'misses') or self.misses is None:
+            self.misses = []
+        
+        # Actualizar arrays y mensajes
+        if resultado == "Disparo exitoso":
+            if (row, col) not in self.hits:
+                self.hits.append((row, col))
+                logger.debug(f"[RESULT] Añadido hit en ({row},{col}). Hits actuales: {self.hits}")
+        else:
+            if (row, col) not in self.misses:
+                self.misses.append((row, col))
+                logger.debug(f"[RESULT] Añadido miss en ({row},{col}). Misses actuales: {self.misses}")
+        
+        # Actualizar mensajes
+        self.last_result_message = "X ¡Le diste!" if resultado == "Disparo exitoso" else "O Fallaste"
+        self.last_result_time = pygame.time.get_ticks()
+        self.status_message = self.last_result_message
+        self.status_color = (0, 255, 0) if "¡Le diste!" in self.last_result_message else (255, 255, 0)
+        self.status_timer = pygame.time.get_ticks() + 3000
+        
+        # Forzar redibujado
+        self.draw()
+        pygame.display.update()
+        logger.debug(f"[RESULT] Resultado procesado y dibujado: {self.last_result_message} en ({row},{col})")
+        self.debug_state()

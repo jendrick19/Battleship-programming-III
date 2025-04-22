@@ -187,33 +187,35 @@ def game():
                     game()
                     return
 
+        # <-- ¡TODO ESTO ESTABA FUERA DEL WHILE!
         msg = connection.get_mensaje()
         if msg:
-            if msg["type"] == "turn_ready":
-                logging.debug("[RED] Se recibió turn_ready, cambiando a PLAYING")
-                current_surface.switch_to_playing()
-            elif msg["type"] == "turn_complete":
-                logging.debug("[RED] Se recibió turn_complete, cambiando a PLAYING")
-                current_surface.switch_to_playing()
-            elif msg["type"] == "victory":
-                current_surface.game_over = True
-                current_surface.winner = f"Player {msg['winner']}"
+            logging.debug("[RED] Mensaje recibido: %s", msg)
+            current_surface._procesar_mensaje_red(msg)
 
         if current_surface:
             if game_started and current_surface.state == STATE_WAITING:
-                logging.debug("[WAIT] Ejecutando wait_for_opponent_turn")
+                # logging.debug("[WAIT] Ejecutando wait_for_opponent_turn")
                 current_surface.wait_for_opponent_turn()
-            current_surface.handle_events(events)
+            else:
+                current_surface.handle_events(events)
+
             current_surface.draw()
+            pygame.display.get_surface().blit(current_surface.surface, (0, 0))
+            pygame.display.flip()
+
             if hasattr(current_surface, 'status_message') and pygame.time.get_ticks() < current_surface.status_timer:
                 font = pygame.font.Font(None, 24)
-                text = font.render(current_surface.status_message, True, (255, 255, 0))
-                current_surface.surface.blit(text, text.get_rect(center=(400, 570)))
-            window.renderSurface(current_surface.surface)
-        window.updateWindow()
+                status = font.render(current_surface.status_message, True, getattr(current_surface, 'status_color', (255, 255, 0)))
+                current_surface.surface.blit(status, (400 - status.get_width() // 2, 570))
+                pygame.display.get_surface().blit(current_surface.surface, (0, 0))
+                pygame.display.flip()
+
+            window.updateWindow()
 
     connection.finalizar()
     pygame.quit()
     sys.exit()
+
 
 game()
