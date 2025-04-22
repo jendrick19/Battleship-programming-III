@@ -21,9 +21,8 @@ class GameSurface:
         self.backSur = pygame.transform.scale(self.backSur, (self.width, self.height))
         self.font_tittle= pygame.font.Font(None, 36)
         self.show_confirmation = False
-        self.option_allow_reshoot = True 
+        self.option_allow_reshoot = True
     
-
         # Para fase "jugando"
         self.offset_x1, self.offset_y1 = 50, 100  # Position grid
         self.offset_x2, self.offset_y2 = 450, 100  # Attack grid
@@ -626,17 +625,27 @@ class GameSurface:
             return None
 
         if self.option_allow_reshoot:
-            # Verificar si hay un barco en la posición
+        # Verificar si hay un barco en la posición
             has_ship = False
+            ship_already_damaged = False
+            target_ship = None
+            position_index = -1
+        
             for ship in self.opponent.ships:
                 if (row, col) in ship.position:
                     has_ship = True
+                    target_ship = ship
+                    position_index = ship.position.index((row, col))
+                    # Verificar si esa parte del barco ya está dañada
+                    if position_index >= 0 and ship.damage_positions[position_index]:
+                        ship_already_damaged = True
                     break
-            
-            # Si no hay barco y ya se disparó a esta posición, no permitir disparar de nuevo
-            if not has_ship and ((row, col) in self.hits or (row, col) in self.misses):
-                return None
-            # Comportamiento original: no permitir disparar a posiciones ya atacadas
+        
+        # Si hay un barco, la posición está en misses, y esa parte del barco NO está dañada, permitir re-atacar
+            if has_ship and (row, col) in self.misses and not ship_already_damaged:
+                # Remover de la lista de misses ya que ahora será un hit
+                self.misses.remove((row, col))
+        # Si no hay barco, ya es un hit, o esa parte del barco ya está dañada, no permitir re-atacar
             elif (row, col) in self.hits or (row, col) in self.misses:
                 return None
 
