@@ -43,4 +43,16 @@ class Player:
         return result
     
     def all_ships_sunken(self):
-        return all(ship.check_sunken_ship() for ship in self.ships)
+        """
+        Verifica si todos los barcos del jugador han sido hundidos
+        """
+        for ship in self.ships:
+            # Verificar si alguna posición del barco aún tiene 's' (no ha sido golpeada)
+            for pos in ship.position:
+                row, col = pos
+                if self.board.grid[row][col] == 's':
+                    # Si al menos una posición no ha sido golpeada, el barco no está hundido
+                    return False
+        
+        # Si llegamos aquí, todos los barcos están hundidos
+        return True

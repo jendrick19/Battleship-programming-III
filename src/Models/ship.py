@@ -28,7 +28,27 @@ class Ship:
         self.is_colliding = False
 
     def check_sunken_ship(self):
-        return self.life == 0
+        """
+        Verifica si el barco ha sido hundido completamente
+        """
+        # Si no tiene posiciones, no puede estar hundido
+        if not hasattr(self, 'position') or not self.position:
+            return False
+        
+        # Obtener el tablero del jugador al que pertenece este barco
+        board = self.player.board if hasattr(self, 'player') and self.player else None
+        
+        if not board:
+            return False
+        
+        # Verificar si todas las posiciones del barco han sido golpeadas
+        for pos in self.position:
+            row, col = pos
+            if board.grid[row][col] == 's':  # 's' significa que hay un barco no golpeado
+                return False
+        
+        # Si todas las posiciones han sido golpeadas, el barco está hundido
+        return True
 
     def damage_received_ship(self, x, y):
         for idx, pos in enumerate(self.position):

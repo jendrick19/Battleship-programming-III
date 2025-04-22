@@ -481,13 +481,14 @@ class GameSurface:
                     "col": col
                 })
 
-                victoria = self.opponent.all_ships_sunken()
+                victoria = self.player.all_ships_sunken()
                 if victoria:
+                    logger.debug("[VICTORIA] Todos los barcos del jugador han sido hundidos")
                     self.game_over = True
-                    self.winner = f"Player {self.player_number}"
+                    self.winner = f"Player {3 - self.player_number}"  # El oponente gana
                     self.connection.enviar_datos({
                         "type": "victory",
-                        "winner": self.player_number
+                        "winner": 3 - self.player_number
                     })
                 else:
                     self.shot_made = False
