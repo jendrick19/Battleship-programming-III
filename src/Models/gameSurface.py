@@ -22,6 +22,7 @@ class GameSurface:
         self.font_tittle= pygame.font.Font(None, 36)
         self.show_confirmation = False
         self.option_allow_reshoot = True 
+    
 
         # Para fase "jugando"
         self.offset_x1, self.offset_y1 = 50, 100  # Position grid
@@ -163,9 +164,6 @@ class GameSurface:
         # dibujar formato de las coordenadas
         format_text = self.font.render("Format: A1 or B5", True, (255, 255, 255))
         self.surface.blit(format_text, (self.btncoords.x + 5, self.btncoords.y - 20))
-        # dibujar el limite de las coordenadas
-        limit_text = self.font.render("Limit: A1 to J10", True, (255, 255, 255))
-        self.surface.blit(limit_text, (self.btncoords.x + 5, self.btncoords.y + 50))
 
         self.color = self.colorA if self.active else self.colorI # Cambiado a verde si el botón está activo
        
@@ -175,6 +173,20 @@ class GameSurface:
         text_surface = self.font.render(button_text, True, (255, 255, 255))
         text_rect = text_surface.get_rect(center=self.btncoords.center)
         self.surface.blit(text_surface, text_rect)
+        
+        #Dibujar nombre de los barcos y obtener posicion de barcos
+    def draw_name_ships(self):
+        ship_names = ["Aircraft Carrier", "Battleship", "Cruiser", "Submarine", "Destroyer"]
+        name_positions_y = []
+        y_offset = -10
+        for name in ship_names:
+            text_surface = self.font.render(name, True, (255, 255, 255))
+            if not self.selected_ship:
+                self.surface.blit(text_surface, (self.btncoords.x - 530, self.btncoords.y + y_offset))
+                
+            name_positions_y.append(self.btncoords.y + y_offset + self.font.get_linesize() // 2) # Guardar la posición y central vertical
+            y_offset += 20
+        return name_positions_y
             
     def handle_attack_input(self, input_text):
         self.error_message = ""
@@ -196,8 +208,7 @@ class GameSurface:
         else:
             self.error_message = "Coordinates out of bounds!"
             self.active = False
-            return self.error_message
-        
+            return self.error_message   
 
     def draw_confirmation_dialog(self):
        # Fondo del cuadro de confirmación
@@ -340,6 +351,9 @@ class GameSurface:
 
         # Dibujar botón de coordenadas
         self.draw_coordinates_button()
+        
+        #Dibujar nombre de barcos
+        
 
         # Dibujar botones de movimiento si hay un barco seleccionado y no se ha realizado una acción
         if self.selected_ship and not self.action_taken:
@@ -367,13 +381,24 @@ class GameSurface:
             move_text = self.font.render("Move your ship", True, (255, 255, 255))
             self.surface.blit(move_text, (20, 430))
 
+        ship_name_positions_y = self.draw_name_ships()
         # Display game status
         if self.player and self.opponent:
             ships_sunk = sum(1 for ship in self.opponent.ships if ship.check_sunken_ship())
             total_ships = len(self.opponent.ships)
             status_text = self.font.render(f"Ships sunk: {ships_sunk}/{total_ships}", True, (255, 255, 255))
             self.surface.blit(status_text, (670, 545))
-
+            
+            for i, ship in enumerate(self.opponent.ships):
+                if ship.check_sunken_ship():
+                    y_position = ship_name_positions_y[i]
+                    
+                    if not self.selected_ship:
+                        pygame.draw.line(self.surface, (100, 100, 100),
+                                     (self.btncoords.x - 530 - 20, y_position), # Ajustar inicio de la línea
+                                     (self.btncoords.x - 530 + 150, y_position), # Ajustar fin de la línea
+                                     3)
+            
             # Display turn status
             if self.action_taken:
                 if self.shot_made:
@@ -390,7 +415,6 @@ class GameSurface:
                 turn_status = self.font.render("Coordinates out of bounds!", True, (255, 0, 0))
                 self.surface.blit(turn_status, (300, 450))
 
-        
             else:
                 turn_status = self.font.render("Move a ship or Make a shot", True, (255, 255, 255))
                 self.surface.blit(turn_status, (300, 450))
@@ -490,6 +514,7 @@ class GameSurface:
                     return "end_turn"
         return None
     
+    
     def handle_ship_selection(self, row, col):
         # Verificar si hay un barco en la posición seleccionada
         for ship in self.player.ships:
@@ -571,6 +596,7 @@ class GameSurface:
             
         # Si solo hay daño en los extremos, puede moverse
         return True
+            
     
     def update_player_board(self):
         # Limpiar el tablero
@@ -610,9 +636,8 @@ class GameSurface:
             # Si no hay barco y ya se disparó a esta posición, no permitir disparar de nuevo
             if not has_ship and ((row, col) in self.hits or (row, col) in self.misses):
                 return None
-        else:
             # Comportamiento original: no permitir disparar a posiciones ya atacadas
-            if (row, col) in self.hits or (row, col) in self.misses:
+            elif (row, col) in self.hits or (row, col) in self.misses:
                 return None
 
         # usar clase jugador para disparar a el oponente
