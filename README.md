@@ -320,10 +320,42 @@ main()
 
 **Métodos principales:**
 
-- `_iniciar_como_servidor`: Configura la conexión como servidor.
-- `_iniciar_como_cliente`: Configura la conexión como cliente.
-- `enviar_datos`: Envía datos a través de la conexión.
-- `recibir_datos`: Recibe datos de la conexión.
+1. **`__init__(self, modo_servidor: bool, ip: str = "0.0.0.0", puerto: int = 5000)`**
+
+   - Constructor que inicializa la conexión.
+   - **Parámetros**:
+     - `modo_servidor`: True para servidor, False para cliente
+     - `ip`: Dirección IP
+     - `puerto`: Puerto de conexión
+
+2. **`_iniciar_como_servidor(self)`**
+
+   - Configura la conexión como servidor.
+
+3. **`_iniciar_como_cliente(self)`**
+
+   - Configura la conexión como cliente.
+
+4. **`enviar_datos(self, info: dict)`**
+
+   - Envía datos a través de la conexión.
+   - **Parámetros**:
+     - `info`: Diccionario con datos a enviar
+
+5. **`recibir_datos(self) -> dict`**
+
+   - Recibe datos de la conexión.
+   - **Retorna**: Diccionario con datos recibidos
+
+6. **`finalizar(self)`**
+   - Cierra la conexión.
+
+**Variables**
+
+- `modo_servidor`: Indica si es servidor o cliente
+- `ip`, `puerto`: Configuración de red
+- `sock`: Socket de conexión
+- `canal`: Canal de comunicación
 
 ```
 import socket
@@ -501,7 +533,7 @@ class Board:
 
 ### gameSurface.py
 
-**Rol**: Maneja la interfaz gráfica del juego, incluyendo la colocación de barcos y el tablero de juego.
+**Responsabilidad**: Manejar la interfaz gráfica del juego.
 
 **Clase principal:**
 
@@ -509,13 +541,88 @@ class Board:
 
 **Métodos principales:**
 
-- `setup_player`: Configura los barcos del jugador.
-- `setup_opponent`: Establece el oponente del jugador.
-- `draw`: Dibuja la interfaz según el estado del juego (configuración o juego).
-- `handle_events`: Maneja eventos de arrastrar y soltar barcos.
-- `handle_click`: Procesa clics en la interfaz.
-- `handle_attack`: Maneja los disparos durante el juego.
-- `move_selected_ship`: Mueve un barco seleccionado.
+1. **`__init__(self, title, width, height, colorT)`**
+
+   - Constructor que inicializa la superficie del juego.
+   - **Parámetros**:
+     - `title`: Título de la ventana
+     - `width`: Ancho
+     - `height`: Alto
+     - `colorT`: Color del título
+
+2. **`setup_player(self, name)`**
+
+   - Configura un jugador con su nombre y barcos.
+   - **Parámetros**:
+     - `name`: Nombre del jugador
+   - **Retorna**: True si la configuración fue exitosa
+
+3. **`setup_opponent(self, opponent)`**
+
+   - Configura el oponente del jugador.
+   - **Parámetros**:
+     - `opponent`: Jugador oponente
+
+4. **`switch_to_playing(self)`**
+
+   - Cambia el estado del juego a "jugando".
+
+5. **`has_ship_collisions(self)`**
+
+   - Verifica si hay colisiones entre barcos.
+   - **Retorna**: True si hay colisiones
+
+6. **`draw(self)`**
+
+   - Dibuja toda la interfaz del juego según el estado actual.
+
+7. **`handle_events(self, events)`**
+
+   - Maneja eventos de entrada.
+   - **Parámetros**:
+     - `events`: Lista de eventos de pygame
+
+8. **`handle_click(self, mouse_pos)`**
+
+   - Maneja clics del mouse.
+   - **Parámetros**:
+     - `mouse_pos`: Posición del mouse
+   - **Retorna**: Acción realizada
+
+9. **`handle_ship_selection(self, row, col)`**
+
+   - Maneja la selección de un barco.
+   - **Parámetros**:
+     - `row`: Fila seleccionada
+     - `col`: Columna seleccionada
+   - **Retorna**: "ship_selected" si se seleccionó un barco
+
+10. **`move_selected_ship(self, direction)`**
+
+    - Mueve el barco seleccionado.
+    - **Parámetros**:
+      - `direction`: Dirección del movimiento
+    - **Retorna**: "ship_moved" si se movió el barco
+
+11. **`handle_attack(self, mouse_pos, row, col)`**
+
+    - Maneja un ataque a una posición.
+    - **Parámetros**:
+      - `mouse_pos`: Posición del mouse
+      - `row`: Fila del ataque
+      - `col`: Columna del ataque
+    - **Retorna**: "shot_made" si se realizó un disparo
+
+12. **`reset_shot_flag(self)`**
+    - Reinicia las banderas de acción y disparo.
+
+**Variables Principales**
+
+- Variables de interfaz: `width`, `height`, `title`, `surface`, `colorT`, `gridSz`, `cellSz`, etc.
+- Variables de estado: `state`, `player_number`, `action_taken`, `game_over`, `winner`
+- Elementos de juego: `player`, `opponent`, `game_logic`, `ships`
+- Elementos UI: `btnContinue`, `btnReset`, `btnEndTurn`, `btnConfirmYes`, `btnConfirmNo`, etc.
+- Listas de seguimiento: `hits`, `misses`, `damaged_positions`
 
 **Variables importantes:**
 
@@ -1388,17 +1495,25 @@ class GameSurface:
         if self.option_allow_reshoot:
             # Verificar si hay un barco en la posición
             has_ship = False
+            ship_already_damaged = False
+            target_ship = None
+            position_index = -1
             for ship in self.opponent.ships:
                 if (row, col) in ship.position:
                     has_ship = True
+                    target_ship = ship
+                    position_index = ship.position.index((row, col))
+                    # Verificar si esa parte del barco ya está dañada
+                    if position_index >= 0 and ship.damage_positions[position_index]:
+                        ship_already_damaged = True
                     break
 
-            # Si no hay barco y ya se disparó a esta posición, no permitir disparar de nuevo
-            if not has_ship and ((row, col) in self.hits or (row, col) in self.misses):
-                return None
-        else:
-            # Comportamiento original: no permitir disparar a posiciones ya atacadas
-            if (row, col) in self.hits or (row, col) in self.misses:
+            # Si hay un barco, la posición está en misses, y esa parte del barco NO está dañada, permitir re-atacar
+            if has_ship and (row, col) in self.misses and not ship_already_damaged:
+                # Remover de la lista de misses ya que ahora será un hit
+                self.misses.remove((row, col))
+            # Si no hay barco, ya es un hit, o esa parte del barco ya está dañada, no permitir re-atacar
+            elif (row, col) in self.hits or (row, col) in self.misses:
                 return None
 
         # Use Player class to shoot at opponent
@@ -1447,20 +1562,96 @@ class GameSurface:
 
 **Métodos principales:**
 
-- `_calculate_positions`: Calcula las posiciones que ocupa el barco.
-- `check_sunken_ship`: Verifica si el barco está hundido.
-- `damage_received_ship`: Registra daño en una posición del barco.
-- `can_move`: Verifica si el barco puede moverse en una dirección.
-- `move`: Mueve el barco en una dirección.
-- `check_collision`: Verifica colisiones con otros barcos.
-- `handle_event`: Maneja eventos de arrastrar y soltar.
-- `rotate`: Rota el barco.
+1. **`__init__(self, length, x, y, isHorizontal=True, name=None)`**
+
+   - Constructor que inicializa un barco.
+   - **Parámetros**:
+     - `length`: Longitud del barco
+     - `x`: Posición x inicial
+     - `y`: Posición y inicial
+     - `isHorizontal`: Orientación (True para horizontal)
+     - `name`: Nombre del barco
+
+2. **`_calculate_positions(self)`**
+
+   - Calcula todas las posiciones que ocupa el barco.
+   - **Retorna**: Lista de tuplas (fila, columna)
+
+3. **`update_positions(self)`**
+
+   - Actualiza las posiciones del barco basado en su posición actual y orientación.
+
+4. **`check_sunken_ship(self)`**
+
+   - Verifica si el barco está hundido.
+   - **Retorna**: True si está hundido, False en caso contrario
+
+5. **`damage_received_ship(self, x, y)`**
+
+   - Registra daño en una posición específica del barco.
+   - **Parámetros**:
+     - `x`: Fila del daño
+     - `y`: Columna del daño
+
+6. **`can_move(self, direction, board, other_ships)`**
+
+   - Verifica si el barco puede moverse en una dirección.
+   - **Parámetros**:
+     - `direction`: Dirección del movimiento ('up', 'down', 'left', 'right')
+     - `board`: Tamaño del tablero
+     - `other_ships`: Lista de otros barcos para verificar colisiones
+   - **Retorna**: True si puede moverse, False en caso contrario
+
+7. **`move(self, direction)`**
+
+   - Mueve el barco en una dirección.
+   - **Parámetros**:
+     - `direction`: Dirección del movimiento
+
+8. **`check_collision(self, other_ships)`**
+
+   - Verifica colisiones con otros barcos.
+   - **Parámetros**:
+     - `other_ships`: Lista de otros barcos
+   - **Retorna**: True si hay colisión, False en caso contrario
+
+9. **`handle_event(self, event, offset_x, offset_y, cellSize, gridSize=10, other_ships=None)`**
+
+   - Maneja eventos de arrastre y rotación del barco.
+   - **Parámetros**:
+     - `event`: Evento de pygame
+     - `offset_x`: Desplazamiento x del tablero
+     - `offset_y`: Desplazamiento y del tablero
+     - `cellSize`: Tamaño de cada celda
+     - `gridSize`: Tamaño del tablero
+     - `other_ships`: Lista de otros barcos
+
+10. **`rotate(self, gridSize)`**
+
+    - Rota el barco (cambia entre horizontal y vertical).
+    - **Parámetros**:
+      - `gridSize`: Tamaño del tablero
+
+11. **`draw(self, surface, offset_x, offset_y, cellSize)`**
+    - Dibuja el barco en una superficie.
+    - **Parámetros**:
+      - `surface`: Superficie de pygame donde dibujar
+      - `offset_x`: Desplazamiento x
+      - `offset_y`: Desplazamiento y
+      - `cellSize`: Tamaño de cada celda
 
 **Variables importantes:**
 
-- `damage_positions`: Lista que indica qué partes del barco están dañadas.
-- `dragging`: Indica si el barco está siendo arrastrado.
-- `is_colliding`: Indica si el barco está colisionando con otro.
+- `length`: Longitud del barco
+- `x`, `y`: Posición del barco
+- `life`: Vida restante del barco
+- `isHorizontal`: Orientación del barco
+- `name`: Nombre del barco
+- `position`: Lista de posiciones que ocupa el barco
+- `damage_positions`: Lista que indica qué segmentos están dañados
+- `dragging`: Indica si el barco está siendo arrastrado
+- `offset_x`, `offset_y`: Desplazamiento durante el arrastre
+- `is_colliding`: Indica si el barco está colisionando con otro
 
 ```
 import pygame
