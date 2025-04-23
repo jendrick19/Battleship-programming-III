@@ -745,6 +745,7 @@ class GameSurface:
         self.offset_x2, self.offset_y2 = 450, 100  # Attack grid
 
         self.font = pygame.font.Font(None, 24)
+        self.coord_font = pygame.font.Font(None, 20)  # Smaller font for coordinates
 
         # State tracking
         self.state = "setup"  # "setup" or "playing"
@@ -880,7 +881,7 @@ class GameSurface:
 
         # Draw title
         title = self.font_tittle.render(self.title, True, self.colorT )
-        title_rect = title.get_rect(center=(self.width // 2, 45))
+        title_rect = title.get_rect(center=(self.width // 2, 25))
         self.surface.blit(title, title_rect)
 
         if self.game_over:
@@ -893,6 +894,17 @@ class GameSurface:
         if self.collision_message and pygame.time.get_ticks() < self.message_timer:
             message = self.font.render(self.collision_message, True, (255, 255, 0))
             self.surface.blit(message, (self.width // 2 - message.get_width() // 2, 475))
+
+    def draw_coordinates(self, offset_x, offset_y):
+        # Draw row labels (A-J)
+        for row in range(self.gridSz):
+            row_label = self.coord_font.render(chr(65 + row), True, (255, 255, 255))
+            self.surface.blit(row_label, (offset_x - 20, offset_y + row * self.cellSz + self.cellSz // 2 - 5))
+
+        # Draw column labels (1-10)
+        for col in range(self.gridSz):
+            col_label = self.coord_font.render(str(col + 1), True, (255, 255, 255))
+            self.surface.blit(col_label, (offset_x + col * self.cellSz + self.cellSz // 2 - 5, offset_y - 20))
 
     def draw_coordinates_button(self):
         """
@@ -913,6 +925,20 @@ class GameSurface:
         text_surface = self.font.render(button_text, True, (255, 255, 255))
         text_rect = text_surface.get_rect(center=self.btncoords.center)
         self.surface.blit(text_surface, text_rect)
+
+    #Dibujar nombre de los barcos y obtener posicion de barcos
+    def draw_name_ships(self):
+        ship_names = ["Aircraft Carrier", "Battleship", "Cruiser", "Submarine", "Destroyer"]
+        name_positions_y = []
+        y_offset = -10
+        for name in ship_names:
+            text_surface = self.font.render(name, True, (255, 255, 255))
+            if not self.selected_ship:
+                self.surface.blit(text_surface, (self.btncoords.x - 530, self.btncoords.y + y_offset))
+
+            name_positions_y.append(self.btncoords.y + y_offset + self.font.get_linesize() // 2) # Guardar la posición y central vertical
+            y_offset += 20
+        return name_positions_y
 
     def handle_attack_input(self, input_text):
         """
@@ -991,6 +1017,8 @@ class GameSurface:
                 rect = pygame.Rect(x, y, self.cellSz, self.cellSz)
                 pygame.draw.rect(self.surface, (6, 190, 225), rect, 2)
 
+        # Draw coordinates
+        self.draw_coordinates(self.offset_x, self.offset_y)
         has_collisions = self.has_ship_collisions()
 
         # Draw ships
@@ -1033,7 +1061,7 @@ class GameSurface:
         """
         # Draw position grid
         titlePosit = self.font.render('POSITIONS', True, (255, 255, 255))
-        self.surface.blit(titlePosit, (self.offset_x1 + 110, self.offset_y1 - 30))
+        self.surface.blit(titlePosit, (self.offset_x1 + 110, self.offset_y1 - 50))
 
         for row in range(self.gridSz):
             for col in range(self.gridSz):
@@ -1048,6 +1076,9 @@ class GameSurface:
                                       (x + self.cellSz // 2, y + self.cellSz // 2),
                                       self.cellSz // 3,
                                       3)
+
+        # Draw coordinates for position grid
+        self.draw_coordinates(self.offset_x1, self.offset_y1)
 
         # Dibujar barcos
         for ship in self.player.ships:
@@ -1072,7 +1103,7 @@ class GameSurface:
 
         # Draw attack grid
         titleAttck = self.font.render('ATTACK', True, (255, 255, 255))
-        self.surface.blit(titleAttck, (self.offset_x2 + 120, self.offset_y2 - 30))
+        self.surface.blit(titleAttck, (self.offset_x2 + 120, self.offset_y2 - 50))
 
         for row in range(self.gridSz):
             for col in range(self.gridSz):
@@ -1098,6 +1129,9 @@ class GameSurface:
                                         (x + self.cellSz // 2, y + self.cellSz // 2),
                                         self.cellSz // 3,
                                         3)
+
+        # Draw coordinates for attack grid
+        self.draw_coordinates(self.offset_x2, self.offset_y2)
 
         # Draw end turn button
         button_color = (255, 0, 0) if self.action_taken else (100, 100, 100)
@@ -1134,14 +1168,25 @@ class GameSurface:
 
             # Instrucciones para mover barcos
             move_text = self.font.render("Move your selected ship", True, (255, 255, 255))
-            self.surface.blit(move_text, (10, 430))
+            self.surface.blit(move_text, (20, 430))
 
+        ship_name_positions_y = self.draw_name_ships()
         # Display game status
         if self.player and self.opponent:
             ships_sunk = sum(1 for ship in self.opponent.ships if ship.check_sunken_ship())
             total_ships = len(self.opponent.ships)
             status_text = self.font.render(f"Ships sunk: {ships_sunk}/{total_ships}", True, (255, 255, 255))
             self.surface.blit(status_text, (600, 545))
+
+            for i, ship in enumerate(self.opponent.ships):
+                if ship.check_sunken_ship():
+                    y_position = ship_name_positions_y[i]
+
+                    if not self.selected_ship:
+                        pygame.draw.line(self.surface, (100, 100, 100),
+                                     (self.btncoords.x - 530 - 20, y_position), # Ajustar inicio de la línea
+                                     (self.btncoords.x - 530 + 150, y_position), # Ajustar fin de la línea
+                                     3)
 
             # Display turn status
             if self.action_taken:
@@ -2080,7 +2125,7 @@ class Window:
 
 
         title = self.font.render(self.title, True, (255, 255, 255))
-        title_rect = title.get_rect(center=(self.width // 2, 100))
+        title_rect = title.get_rect(center=(self.width // 2, 50))
         self.window.blit(title, title_rect)
 
         pygame.draw.rect(self.window, (255, 0, 0), self.btnPlay)
@@ -2168,6 +2213,10 @@ def game():
     execute = True
     current_surface = None
     game_started = False
+    mouse_pos = (0, 0)  # Inicializar mouse_pos
+
+    # Create home button
+    home_btn = pygame.Rect(720, 20, 60, 40)
 
     while execute:
         events = pygame.event.get()
@@ -2177,6 +2226,12 @@ def game():
 
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 mouse_pos = pygame.mouse.get_pos() # Obtiene la posición del ratón
+
+                # Check if home button was clicked
+                if home_btn.collidepoint(mouse_pos):
+                    current_surface = None
+                    game_started = False
+                    continue
 
                 if current_surface is None:
 
@@ -2228,6 +2283,13 @@ def game():
             current_surface.handle_events(events)
             current_surface.draw()
             window.renderSurface(current_surface.surface)
+
+            # Draw home button on current surface
+            pygame.draw.rect(window.window, (250, 250, 250), home_btn)
+            font = pygame.font.Font(None, 24)
+            home_text = font.render('Home', True, (0, 0, 0))
+            home_text_rect = home_text.get_rect(center=home_btn.center)
+            window.window.blit(home_text, home_text_rect)
         else:
             window.drawBtns() # Dibujar los botones del menú principal si no hay superficie activa
 
