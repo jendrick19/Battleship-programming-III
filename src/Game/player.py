@@ -55,4 +55,19 @@ class Player:
                     return False
         
         # Si llegamos aquí, todos los barcos están hundidos
-        return True
+        return True   
+    
+    def update_board(self):
+        """Actualiza el tablero del jugador basado en las posiciones actuales de los barcos"""
+        # Limpiar el tablero
+        self.board.grid = [['w' for _ in range(self.board.size)] for _ in range(self.board.size)]
+        
+        # Actualizar posiciones de los barcos en el tablero
+        for ship in self.ships:
+            for idx, (row, col) in enumerate(ship.position):
+                if 0 <= row < self.board.size and 0 <= col < self.board.size:
+                    # Marcar como 's' si no está dañada, o como 'x' si está dañada
+                    if ship.damage_positions[idx]:
+                        self.board.grid[row][col] = 'x'  # Parte dañada del barco
+                    else:
+                        self.board.grid[row][col] = 's'  # Parte intacta del barco
