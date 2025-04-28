@@ -1,4 +1,7 @@
 import pygame
+import logging
+
+logger = logging.getLogger(__name__)
 
 class Ship:
     def __init__(self, length, x, y, isHorizontal=True, name=None):
@@ -9,13 +12,14 @@ class Ship:
         self.isHorizontal = isHorizontal
         self.name = name or f"Ship{length}"
         self.position = self._calculate_positions()
-        self.damage_positions = [False] * self.length  # Indica qué segmentos del barco están dañados
+        self.damage_positions = [False] * self.length  # Indicates which segments of the ship are damaged
         
         # UI properties
         self.dragging = False
         self.offset_x = 0
         self.offset_y = 0
         self.is_colliding = False
+        self.mouse_down_pos = None  # Store the position where mouse was pressed
 
         # initial Positions for collide check
         self.initial_x = x
@@ -37,20 +41,22 @@ class Ship:
         self.is_colliding = False
     
     def check_sunken_ship(self):
-        return self.life == 0
+        return self.life <= 0
     
     def damage_received_ship(self, x, y):
         for idx, pos in enumerate(self.position):
             if pos[0] == x and pos[1] == y:
-                self.damage_positions[idx] = True
-                self.life -= 1
-                break
+                if not self.damage_positions[idx]:
+                    self.damage_positions[idx] = True
+                    self.life -= 1
+                    return True
+        return False
     
     def can_move(self, direction, board, other_ships):
         if self.check_sunken_ship():
             return False 
 
-        # Calcular nuevas posiciones según la dirección
+        # Calculate new positions based on direction
         if direction == 'left' and self.isHorizontal:
             if self.damage_positions[0]:
                 return False 
@@ -89,7 +95,7 @@ class Ship:
         else:
             return False
         
-        # Verificar colisiones con otros barcos
+        # Check collisions with other ships
         for ship in other_ships:
             if ship == self: continue
             if set(new_pos).intersection(set(ship.position)):
@@ -122,89 +128,159 @@ class Ship:
                 
         return False
     
+    def get_rect(self, offset_x, offset_y, cellSize):
+        """Get the rectangle that represents the ship's area"""
+        if self.isHorizontal:
+            return pygame.Rect(
+                offset_x + self.x * cellSize,
+                offset_y + self.y * cellSize,
+                self.length * cellSize,
+                cellSize
+            )
+        else:
+            return pygame.Rect(
+                offset_x + self.x * cellSize,
+                offset_y + self.y * cellSize,
+                cellSize,
+                self.length * cellSize
+            )
+    
+    def start_drag(self, mouse_x, mouse_y, offset_x, offset_y, cellSize):
+        """Start dragging the ship"""
+        logger.debug(f"Starting drag for ship {self.name} at ({self.x}, {self.y})")
+        self.dragging = True
+        self.mouse_down_pos = (mouse_x, mouse_y)
+        
+        # Calculate offset from mouse position to ship origin
+        self.offset_x = mouse_x - (offset_x + self.x * cellSize)
+        self.offset_y = mouse_y - (offset_y + self.y * cellSize)
+        
+        # Save initial position for collision handling
+        self.initial_x = self.x
+        self.initial_y = self.y
+        self.initial_isHorizontal = self.isHorizontal
+    
+    def end_drag(self, gridSize, other_ships):
+        """End dragging the ship"""
+        if not self.dragging:
+            return False
+        
+        logger.debug(f"Ending drag for ship {self.name} at ({self.x}, {self.y})")
+        self.dragging = False
+        self.mouse_down_pos = None
+        
+        # Round to nearest cell position
+        self.x = round(self.x)
+        self.y = round(self.y)
+        
+        # Ensure ship is within bounds
+        if self.isHorizontal:
+            self.x = max(0, min(gridSize - self.length, self.x))
+            self.y = max(0, min(gridSize - 1, self.y))
+        else:
+            self.x = max(0, min(gridSize - 1, self.x))
+            self.y = max(0, min(gridSize - self.length, self.y))
+        
+        self.update_positions()
+        
+        # Check collisions with other ships
+        if other_ships and self.check_collision(other_ships):
+            logger.debug(f"Collision detected for ship {self.name}, reverting to initial position")
+            self.is_colliding = True
+            self.x = self.initial_x  # if collide, set positions to initial positions
+            self.y = self.initial_y
+            self.isHorizontal = self.initial_isHorizontal
+            self.update_positions()
+            return False
+        else:
+            self.is_colliding = False
+            return True
+    
+    def update_drag_position(self, mouse_x, mouse_y, offset_x, offset_y, cellSize, gridSize):
+        """Update the ship's position during dragging"""
+        if not self.dragging:
+            return False
+        
+        # Prevent jumps by checking if mouse has moved significantly from initial position
+        if self.mouse_down_pos:
+            dx = abs(mouse_x - self.mouse_down_pos[0])
+            dy = abs(mouse_y - self.mouse_down_pos[1])
+            if dx < 5 and dy < 5:  # Small threshold to prevent accidental movement
+                return True
+            self.mouse_down_pos = None  # Clear after first significant movement
+            
+        # Calculate new position based on mouse position and offset
+        new_x = (mouse_x - offset_x - self.offset_x) / cellSize
+        new_y = (mouse_y - offset_y - self.offset_y) / cellSize
+        
+        # Update ship position
+        self.x = new_x
+        self.y = new_y
+        
+        # Limit position within board boundaries
+        if self.isHorizontal:
+            self.x = max(0, min(gridSize - self.length, self.x))
+            self.y = max(0, min(gridSize - 1, self.y))
+        else:
+            self.x = max(0, min(gridSize - 1, self.x))
+            self.y = max(0, min(gridSize - self.length, self.y))
+        
+        self.update_positions()
+        return True
+    
     def handle_event(self, event, offset_x, offset_y, cellSize, gridSize=10, other_ships=None):
         if other_ships is None:
             other_ships = []
         
+        # Handle mouse button down event
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             mouse_x, mouse_y = event.pos
             
-            if self.isHorizontal:
-                ship_rect = pygame.Rect(
-                    offset_x + self.x * cellSize,
-                    offset_y + self.y * cellSize,
-                    self.length * cellSize,
-                    cellSize
-                )
-            else:
-                ship_rect = pygame.Rect(
-                    offset_x + self.x * cellSize,
-                    offset_y + self.y * cellSize,
-                    cellSize,
-                    self.length * cellSize
-                )
-                    
+            # Check if the mouse click is on the ship
+            ship_rect = self.get_rect(offset_x, offset_y, cellSize)
             if ship_rect.collidepoint(mouse_x, mouse_y):
-                self.dragging = True
-                self.offset_x = self.x * cellSize - (mouse_x - offset_x)
-                self.offset_y = self.y * cellSize - (mouse_y - offset_y)
-                self.initial_x = self.x #save initial position
-                self.initial_y = self.y
-                self.initial_isHorizontal = self.isHorizontal
-
+                self.start_drag(mouse_x, mouse_y, offset_x, offset_y, cellSize)
+                return True
+            
+        # Handle mouse button up event
         elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+            # Always check if we need to end dragging, even if we think we're not dragging
             if self.dragging:
-                self.dragging = False
-                
-                self.x = round((self.x * cellSize) / cellSize)
-                self.y = round((self.y * cellSize) / cellSize)
-                
-                if self.isHorizontal:
-                    self.x = max(0, min(gridSize - self.length, self.x))
-                    self.y = max(0, min(gridSize - 1, self.y))
-                else:
-                    self.x = max(0, min(gridSize - 1, self.x))
-                    self.y = max(0, min(gridSize - self.length, self.y))
-                
-                self.update_positions()
-                
-                if other_ships and self.check_collision(other_ships):
-                    self.is_colliding = True
-                    self.x = self.initial_x #if collide, set positions to initial positions before drag the ship
-                    self.y = self.initial_y
-                    self.isHorizontal = self.initial_isHorizontal
-                    self.update_positions()
-                else:
-                    self.is_colliding = False
-
-        elif event.type == pygame.MOUSEMOTION and self.dragging:
-            mouse_x, mouse_y = event.pos
-
-            newX = (mouse_x - offset_x + self.offset_x) / cellSize
-            newY = (mouse_y - offset_y + self.offset_y) / cellSize
-            
-            if self.isHorizontal:
-                self.x = max(0, min(gridSize - self.length, newX))
-                self.y = max(0, min(gridSize - 1, newY))
+                result = self.end_drag(gridSize, other_ships)
+                return result
             else:
-                self.x = max(0, min(gridSize - 1, newX))
-                self.y = max(0, min(gridSize - self.length, newY))
-            
-            self.update_positions()
-            
-            if other_ships:
-                self.is_colliding = self.check_collision(other_ships)
+                # Force reset dragging state
+                self.dragging = False
+                self.mouse_down_pos = None
         
+        # Handle mouse motion event
+        elif event.type == pygame.MOUSEMOTION:
+            # Only process motion if we're dragging
+            if self.dragging:
+                mouse_x, mouse_y = event.pos
+                result = self.update_drag_position(mouse_x, mouse_y, offset_x, offset_y, cellSize, gridSize)
+                
+                # Check collisions in real time
+                if result and other_ships:
+                    self.is_colliding = self.check_collision(other_ships)
+                
+                return result
+        
+        # Handle key press event for rotation
         elif event.type == pygame.KEYDOWN and self.dragging and event.key == pygame.K_SPACE:
-        
+            # Rotate the ship
             self.rotate(gridSize)
             self.update_positions()
             
+            # Check collisions after rotating
             if other_ships and self.check_collision(other_ships):
-                self.update_positions()
                 self.is_colliding = True
             else:
                 self.is_colliding = False
+            
+            return True
+        
+        return False
 
     def rotate(self, gridSize):
         if self.isHorizontal:
@@ -233,13 +309,17 @@ class Ship:
     def draw(self, surface, offset_x, offset_y, cellSize):
         color = (255, 0, 0) if self.is_colliding else (0, 0, 0)
         
+        # Highlight the ship if it's being dragged
+        if self.dragging:
+            color = (0, 255, 0)  # Green for dragging
+        
         if self.isHorizontal:
             for i in range(self.length):
                 x = offset_x + (self.x + i) * cellSize
                 y = offset_y + self.y * cellSize
                 rect = pygame.Rect(x, y, cellSize, cellSize)
                 
-                # Dibujar el segmento del barco
+                # Draw the ship segment
                 segment_color = (255, 0, 0) if self.damage_positions[i] else color
                 pygame.draw.rect(surface, segment_color, rect)
         else:
@@ -248,6 +328,6 @@ class Ship:
                 y = offset_y + (self.y + i) * cellSize
                 rect = pygame.Rect(x, y, cellSize, cellSize)
                 
-                # Dibujar el segmento del barco
+                # Draw the ship segment
                 segment_color = (255, 0, 0) if self.damage_positions[i] else color
                 pygame.draw.rect(surface, segment_color, rect)
