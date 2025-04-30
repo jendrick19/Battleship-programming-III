@@ -71,8 +71,6 @@ class Conexion:
             raise ConnectionError(f"Error al enviar: {e}")
 
     def _loop_escucha(self):
-        import logging
-        logger = logging.getLogger(__name__)
         logger.debug("[LOOP] Iniciando loop de escucha...")
 
         while self.escuchando and self.connected:
@@ -95,10 +93,10 @@ class Conexion:
             except Exception as e:
                 logger.warning(f"[LOOP] Error de recepción: {e}")
 
-            time.sleep(0.05)
+            time.sleep(0.01)  # Reducido de 0.05 a 0.01 para mayor responsividad
 
-            # Heartbeat: enviar ping cada 5s
-            if time.time() - self.ultimo_ping > 5:
+            # Heartbeat: enviar ping cada 3s (reducido de 5s)
+            if time.time() - self.ultimo_ping > 3:
                 try:
                     self.enviar_datos({"type": "ping"})
                     self.ultimo_ping = time.time()
@@ -108,8 +106,8 @@ class Conexion:
                     self.finalizar()
                     break
 
-            # Timeout si no se recibe pong en 30s
-            if time.time() - self.ultimo_pong > 30:
+            # Timeout si no se recibe pong en 15s (reducido de 30s)
+            if time.time() - self.ultimo_pong > 15:
                 logger.error("[LOOP] Timeout: oponente inactivo.")
                 self.finalizar()
                 break

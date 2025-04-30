@@ -234,16 +234,55 @@ class GameSurface:
 
     def draw_name_ships(self):
         ship_names = ["Aircraft Carrier", "Battleship", "Cruiser", "Submarine", "Destroyer"]
+        ship_name_rects = []  # Lista para almacenar los rectángulos de los nombres
         name_positions_y = []
         y_offset = -10
-        for name in ship_names:
-            text_surface = self.font.render(name, True, (255, 255, 255))
+        
+        # Actualizar el conteo de barcos hundidos
+        ships_sunk = 0
+        if self.opponent:
+            ships_sunk = sum(1 for ship in self.opponent.ships if ship.check_sunken_ship())
+        
+        for i, name in enumerate(ship_names):
+            # Determinar si el barco está hundido
+            is_sunk = False
+            if self.opponent and i < len(self.opponent.ships):
+                is_sunk = self.opponent.ships[i].check_sunken_ship()
+            
+            # Color del texto: gris si está hundido, blanco si no
+            text_color = (150, 150, 150) if is_sunk else (255, 255, 255)
+            
+            # Renderizar el nombre del barco
+            text_surface = self.font.render(name, True, text_color)
+            
+            # Posición del texto
+            text_pos = (self.btncoords.x - 530, self.btncoords.y + y_offset)
+            
+            # Crear un rectángulo para detectar clics
+            text_rect = pygame.Rect(text_pos[0], text_pos[1], text_surface.get_width(), text_surface.get_height())
+            ship_name_rects.append((text_rect, i))
+            
+            # Dibujar el texto si no hay un barco seleccionado
             if not self.selected_ship:
-                self.surface.blit(text_surface, (self.btncoords.x - 530, self.btncoords.y + y_offset))
+                self.surface.blit(text_surface, text_pos)
                 
+                # Dibujar una línea a través del nombre si está hundido
+                if is_sunk:
+                    pygame.draw.line(self.surface, (150, 150, 150),
+                                (text_pos[0], text_pos[1] + text_surface.get_height() // 2),
+                                (text_pos[0] + text_surface.get_width(), text_pos[1] + text_surface.get_height() // 2),
+                                2)
+            
             name_positions_y.append(self.btncoords.y + y_offset + self.font.get_linesize() // 2)
             y_offset += 20
-        return name_positions_y
+        
+        # Mostrar el conteo de barcos hundidos
+        if self.opponent:
+            total_ships = len(self.opponent.ships)
+            status_text = self.font.render(f"Ships sunk: {ships_sunk}/{total_ships}", True, (255, 255, 255))
+            self.surface.blit(status_text, (self.width - status_text.get_width() - 20, 545))
+        
+        return name_positions_y, ship_name_rects
 
     def draw_confirmation_dialog(self):
        # Background of the box
@@ -321,9 +360,9 @@ class GameSurface:
                 # Draw damaged positions (where there was a ship but it moved)
                 if (row, col) in self.damaged_positions and (row, col) not in [pos for ship in self.player.ships for pos in ship.position]:
                     pygame.draw.circle(self.surface, (150, 150, 150),
-                                      (x + self.cellSz // 2, y + self.cellSz // 2),
-                                      self.cellSz // 3,
-                                      3)
+                                    (x + self.cellSz // 2, y + self.cellSz // 2),
+                                    self.cellSz // 3,
+                                    3)
 
         # Draw coordinates for the position grid
         self.draw_coordinates(self.offset_x1, self.offset_y1)
@@ -363,13 +402,13 @@ class GameSurface:
                 # Draw hits (red X)
                 if (row, col) in self.hits:
                     pygame.draw.line(self.surface, (255, 0, 0),
-                                     (x + 5, y + 5),
-                                     (x + self.cellSz - 5, y + self.cellSz - 5),
-                                     3)
+                                    (x + 5, y + 5),
+                                    (x + self.cellSz - 5, y + self.cellSz - 5),
+                                    3)
                     pygame.draw.line(self.surface, (255, 0, 0),
-                                     (x + self.cellSz - 5, y + 5),
-                                     (x + 5, y + self.cellSz - 5),
-                                     3)
+                                    (x + self.cellSz - 5, y + 5),
+                                    (x + 5, y + self.cellSz - 5),
+                                    3)
 
                 # Draw misses (white circle)
                 if (row, col) in self.misses:
@@ -392,68 +431,53 @@ class GameSurface:
         # Draw coordinates button
         self.draw_coordinates_button()
         
-        # Draw ship names
-        ship_name_positions_y = self.draw_name_ships()
+        # Draw ship names and get their positions
+        ship_name_positions_y, ship_name_rects = self.draw_name_ships()
 
         # Draw movement buttons if a ship is selected and no action has been taken
         if self.selected_ship and not self.action_taken and self.state == "playing":
             # Up button
             pygame.draw.rect(self.surface, (0, 150, 255), self.btnMoveUp)
             pygame.draw.polygon(self.surface, (255, 255, 255), 
-                               [(60 + 20, 450 + 10), (60 + 10, 450 + 30), (60 + 30, 450 + 30)])
+                            [(60 + 20, 450 + 10), (60 + 10, 450 + 30), (60 + 30, 450 + 30)])
             
             # Down button
             pygame.draw.rect(self.surface, (0, 150, 255), self.btnMoveDown)
             pygame.draw.polygon(self.surface, (255, 255, 255), 
-                               [(60 + 20, 550 + 30), (60 + 10, 550 + 10), (60 + 30, 550 + 10)])
+                            [(60 + 20, 550 + 30), (60 + 10, 550 + 10), (60 + 30, 550 + 10)])
             
             # Left button
             pygame.draw.rect(self.surface, (0, 150, 255), self.btnMoveLeft)
             pygame.draw.polygon(self.surface, (255, 255, 255), 
-                               [(20 + 10, 500 + 20), (20 + 30, 500 + 10), (20 + 30, 500 + 30)])
+                            [(20 + 10, 500 + 20), (20 + 30, 500 + 10), (20 + 30, 500 + 30)])
             
             # Right button
             pygame.draw.rect(self.surface, (0, 150, 255), self.btnMoveRight)
             pygame.draw.polygon(self.surface, (255, 255, 255), 
-                               [(100 + 30, 500 + 20), (100 + 10, 500 + 10), (100 + 10, 500 + 30)])
+                            [(100 + 30, 500 + 20), (100 + 10, 500 + 10), (100 + 10, 500 + 30)])
             
             # Instructions for moving ships
             move_text = self.font.render("Move ship", True, (255, 255, 255))
             self.surface.blit(move_text, (20, 430))
+            
+            # Show selected ship name
+            selected_ship_text = self.font.render(f"Selected: {self.selected_ship.name}", True, (0, 255, 0))
+            self.surface.blit(selected_ship_text, (20, 400))
 
-        # Display game status - Repositioned for better visibility
-        if self.player and self.opponent:
-            ships_sunk = sum(1 for ship in self.opponent.ships if ship.check_sunken_ship())
-            total_ships = len(self.opponent.ships)
-            status_text = self.font.render(f"Ships sunk: {ships_sunk}/{total_ships}", True, (255, 255, 255))
-            # Adjust position to be more centered and visible
-            self.surface.blit(status_text, (self.width - status_text.get_width() - 20, 545))
-            
-            for i, ship in enumerate(self.opponent.ships):
-                if ship.check_sunken_ship():
-                    y_position = ship_name_positions_y[i]
-                    
-                    if not self.selected_ship:
-                        pygame.draw.line(self.surface, (100, 100, 100),
-                                     (self.btncoords.x - 530 - 20, y_position), # Adjust start of line
-                                     (self.btncoords.x - 530 + 150, y_position), # Adjust end of line
-                                     3)
-            
-            # Display turn status - Repositioned to not be stuck to the button
-            if self.action_taken:
-                if self.shot_made:
-                    turn_status = self.font.render("Shot made! Click End Turn", True, (255, 255, 0))
-                else:
-                    turn_status = self.font.render("Ship moved! Click End Turn", True, (255, 255, 0))
-                # Position higher to separate from button
-                self.surface.blit(turn_status, (300, 420))
-            elif not self.action_taken and self.error_message:
-                turn_status = self.font.render(self.error_message, True, (255, 0, 0))
-                self.surface.blit(turn_status, (300, 420))
+        # Display turn status - Repositioned to not be stuck to the button
+        if self.action_taken:
+            if self.shot_made:
+                turn_status = self.font.render("Shot made! Click End Turn", True, (255, 255, 0))
             else:
-                turn_status = self.font.render("Move a ship or make a shot", True, (255, 255, 255))
-                self.surface.blit(turn_status, (300, 420))
-
+                turn_status = self.font.render("Ship moved! Click End Turn", True, (255, 255, 0))
+            # Position higher to separate from button
+            self.surface.blit(turn_status, (300, 420))
+        elif not self.action_taken and self.error_message:
+            turn_status = self.font.render(self.error_message, True, (255, 0, 0))
+            self.surface.blit(turn_status, (300, 420))
+        else:
+            turn_status = self.font.render("Move a ship or make a shot", True, (255, 255, 255))
+            self.surface.blit(turn_status, (300, 420))
     def draw_game_over(self):
         self.state = "game_over"
         self.title = "GAME OVER"
@@ -513,13 +537,19 @@ class GameSurface:
                             self.active = True
                             # Clear error message when clicking on the field
                             self.error_message = ""
+                            # Force update to show the active state immediately
+                            self.force_update()
                         else:
-                            self.active = False
+                            if self.active:  # Solo desactivar si estaba activo
+                                self.active = False
+                                # Force update to show the inactive state immediately
+                                self.force_update()
                     
                     # Handle keyboard events when the field is active
                     if event.type == pygame.KEYDOWN and self.active:
                         if event.key == pygame.K_RETURN:
                             # Process the attack when Enter is pressed
+                            logger.debug("[INPUT] Enter key pressed, processing attack input")
                             result = self.handle_attack_input(self.input_text)
                             self.input_text = ""
                             # Force update to show results immediately
@@ -572,6 +602,17 @@ class GameSurface:
                     return self.move_selected_ship('left')
                 elif self.btnMoveRight.collidepoint(mouse_pos):
                     return self.move_selected_ship('right')
+            
+            # Check if a ship name was clicked
+            _, ship_name_rects = self.draw_name_ships()
+            for rect, ship_index in ship_name_rects:
+                if rect.collidepoint(mouse_pos) and ship_index < len(self.player.ships):
+                    # If already selected, deselect it
+                    if self.selected_ship == self.player.ships[ship_index]:
+                        self.selected_ship = None
+                    else:
+                        self.selected_ship = self.player.ships[ship_index]
+                    return "ship_selected"
             
             # Check if a ship was clicked on the position board
             for row in range(self.gridSz):
@@ -840,7 +881,8 @@ class GameSurface:
             return
 
         try:
-            ready, _, _ = select.select([self.connection.canal], [], [], 0.1)
+            # Reducir el tiempo de espera de select para mayor responsividad
+            ready, _, _ = select.select([self.connection.canal], [], [], 0.05)
             if ready:
                 datos = self.connection.canal.recv(self.connection.bufsize).decode("utf-8")
                 if not datos:
@@ -857,6 +899,14 @@ class GameSurface:
                     except json.JSONDecodeError as e:
                         logger.warning(f"[WAIT] Invalid JSON received: {e}")
 
+            # Actualizar el mensaje de estado periódicamente para mostrar que el juego sigue activo
+            current_time = pygame.time.get_ticks()
+            if current_time % 3000 < 50:  # Actualizar aproximadamente cada 3 segundos
+                self.status_message = "Waiting for opponent's move..."
+                self.status_timer = current_time + 3000
+                self.status_color = (255, 255, 0)
+                self.force_update()  # Forzar actualización para mostrar el mensaje
+
         except Exception as e:
             logger.error(f"[WAIT] Error in select/recv: {e}")
             self.status_message = "Network error"
@@ -864,6 +914,7 @@ class GameSurface:
             self.status_color = (255, 0, 0)
             self._cerrar_por_desconexion(f"Network error: {e}")
         
+        # Asegurar que los hits y misses se muestren correctamente
         if self.hits or self.misses:
             self.draw()
             pygame.display.update()
@@ -921,6 +972,7 @@ class GameSurface:
                     "col": col
                 })
 
+                # Check if all ships are sunk after the attack
                 victory = self.player.all_ships_sunken()
                 if victory:
                     logger.debug("[VICTORY] All player ships have been sunk")
@@ -930,6 +982,8 @@ class GameSurface:
                         "type": "victory",
                         "winner": 3 - self.player_number
                     })
+                    # Force update to show game over screen immediately
+                    self.force_update()
                 else:
                     self.shot_made = False
                     self.state = "waiting_for_opponent"
@@ -947,22 +1001,53 @@ class GameSurface:
                 return
 
             if result == "Disparo exitoso":
-                self.hits.append((row, col))
-                self.last_result_message = "X Hit!"
+                if (row, col) not in self.hits:
+                    self.hits.append((row, col))
+                    self.last_result_message = "X Hit!"
+                    
+                    # Check if this hit sunk a ship
+                    for ship in self.opponent.ships:
+                        if (row, col) in ship.position:
+                            position_index = ship.position.index((row, col))
+                            ship.damage_positions[position_index] = True
+                            ship.life -= 1
+                            
+                            # Check if ship is now sunk
+                            if ship.life <= 0:
+                                self.status_message = f"You sunk their {ship.name}!"
+                                self.status_timer = pygame.time.get_ticks() + 3000
+                                self.status_color = (255, 255, 0)
+                            break
             else:
-                self.misses.append((row, col))
-                self.last_result_message = "O Miss"
+                if (row, col) not in self.misses:
+                    self.misses.append((row, col))
+                    self.last_result_message = "O Miss"
 
             self.last_result_time = pygame.time.get_ticks()
             self.shot_made = True
             logger.debug(f"[RESULT] Updated hits/misses: {self.hits=} {self.misses=}")
-            self.draw()  # to ensure the impact is shown
+            
+            # Check for victory after processing the result
+            all_sunk = all(ship.check_sunken_ship() for ship in self.opponent.ships)
+            if all_sunk:
+                logger.debug("[VICTORY] All opponent ships have been sunk")
+                self.game_over = True
+                self.winner = f"Player {self.player_number}"  # You win
+                self.connection.enviar_datos({
+                    "type": "victory",
+                    "winner": self.player_number
+                })
+            
+            # Force update to show the result immediately
+            self.force_update()
 
         elif msg["type"] == "victory":
             self.game_over = True
             self.winner = f"Player {msg['winner']}"
             self.state = "game_over"
             logger.info(f"[VICTORY] The winner is Player {msg['winner']}")
+            # Force update to show game over screen immediately
+            self.force_update()
 
         elif msg["type"] == "ship_moved":
             # Process opponent ship movement
@@ -996,9 +1081,12 @@ class GameSurface:
                 self.status_message = f"Opponent moved a ship {dir_en}"
                 self.status_timer = pygame.time.get_ticks() + 3000
                 self.status_color = (255, 255, 0)
+                
+                # Force update to show the movement immediately
+                self.force_update()
             else:
                 logger.warning(f"[NET] Could not move ship {ship_index} in direction {direction}")
-                
+
     def end_turn(self):
         logger = logging.getLogger(__name__)
 
