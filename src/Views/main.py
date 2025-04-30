@@ -33,11 +33,11 @@ def do_initial_handshake(connection, current_surface, titulo, modo_servidor):
             logger.debug("[HANDSHAKE] Server mode: waiting for client...")
 
             current_surface.status_message = "Waiting for client ships..."
-            current_surface.status_timer = pygame.time.get_ticks() + 20000
+            current_surface.status_timer = pygame.time.get_ticks() + 60000  # Aumentado a 60 segundos
             data = None
             start = pygame.time.get_ticks()
 
-            while pygame.time.get_ticks() - start < 20000:
+            while pygame.time.get_ticks() - start < 60000:  # Aumentado a 60 segundos
                 msg = connection.get_mensaje()
                 if msg and msg.get("type") == "player_ready":
                     logger.debug("[HANDSHAKE] Received player_ready from client: %s", msg)
@@ -75,11 +75,11 @@ def do_initial_handshake(connection, current_surface, titulo, modo_servidor):
             })
 
             current_surface.status_message = "Waiting for server confirmation..."
-            current_surface.status_timer = pygame.time.get_ticks() + 20000
+            current_surface.status_timer = pygame.time.get_ticks() + 60000  # Aumentado a 60 segundos
             data = None
             start = pygame.time.get_ticks()
 
-            while pygame.time.get_ticks() - start < 20000:
+            while pygame.time.get_ticks() - start < 60000:  # Aumentado a 60 segundos
                 msg = connection.get_mensaje()
                 if msg and msg.get("type") == "player_ready":
                     logger.debug("[HANDSHAKE] Received player_ready from server: %s", msg)

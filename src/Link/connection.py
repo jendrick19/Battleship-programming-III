@@ -93,10 +93,10 @@ class Conexion:
             except Exception as e:
                 logger.warning(f"[LOOP] Error de recepción: {e}")
 
-            time.sleep(0.01)  # Reducido de 0.05 a 0.01 para mayor responsividad
+            time.sleep(0.01)  # Mantener responsividad
 
-            # Heartbeat: enviar ping cada 3s (reducido de 5s)
-            if time.time() - self.ultimo_ping > 3:
+            # Heartbeat: enviar ping cada 10s (aumentado de 3s)
+            if time.time() - self.ultimo_ping > 10:
                 try:
                     self.enviar_datos({"type": "ping"})
                     self.ultimo_ping = time.time()
@@ -106,8 +106,8 @@ class Conexion:
                     self.finalizar()
                     break
 
-            # Timeout si no se recibe pong en 15s (reducido de 30s)
-            if time.time() - self.ultimo_pong > 15:
+            # Timeout si no se recibe pong en 60s (aumentado de 15s)
+            if time.time() - self.ultimo_pong > 60:
                 logger.error("[LOOP] Timeout: oponente inactivo.")
                 self.finalizar()
                 break
@@ -118,7 +118,7 @@ class Conexion:
         if not self.connected:
             return None
         try:
-            ready, _, _ = select.select([self.canal], [], [], 0.1)
+            ready, _, _ = select.select([self.canal], [], [], 0.05)  # Reducido a 0.05s para mayor responsividad
             if ready:
                 datos = self.canal.recv(self.bufsize).decode('utf-8')
                 if not datos:

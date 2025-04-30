@@ -238,16 +238,16 @@ class GameSurface:
         name_positions_y = []
         y_offset = -10
         
-        # Actualizar el conteo de barcos hundidos
+        # Actualizar el conteo de barcos hundidos del oponente (para mostrar en el contador)
         ships_sunk = 0
         if self.opponent:
             ships_sunk = sum(1 for ship in self.opponent.ships if ship.check_sunken_ship())
         
         for i, name in enumerate(ship_names):
-            # Determinar si el barco está hundido
+            # Determinar si el barco del JUGADOR está hundido (para tachar en la lista)
             is_sunk = False
-            if self.opponent and i < len(self.opponent.ships):
-                is_sunk = self.opponent.ships[i].check_sunken_ship()
+            if self.player and i < len(self.player.ships):
+                is_sunk = self.player.ships[i].check_sunken_ship()
             
             # Color del texto: gris si está hundido, blanco si no
             text_color = (150, 150, 150) if is_sunk else (255, 255, 255)
@@ -276,7 +276,7 @@ class GameSurface:
             name_positions_y.append(self.btncoords.y + y_offset + self.font.get_linesize() // 2)
             y_offset += 20
         
-        # Mostrar el conteo de barcos hundidos
+        # Mostrar el conteo de barcos hundidos del OPONENTE
         if self.opponent:
             total_ships = len(self.opponent.ships)
             status_text = self.font.render(f"Ships sunk: {ships_sunk}/{total_ships}", True, (255, 255, 255))
@@ -794,18 +794,23 @@ class GameSurface:
                 self.action_taken = True
                 self.active = False
                 logger.debug("[ATTACK_INPUT] Shot made successfully")
+                # Forzar actualización inmediata
+                self.force_update()
                 return "shot_made"
             else:
                 self.error_message = "Could not make the shot. Try again."
                 self.active = False
                 logger.debug(f"[ATTACK_INPUT] Error: {self.error_message}")
+                # Forzar actualización inmediata
+                self.force_update()
                 return self.error_message
         else:
             self.error_message = "Coordinates out of bounds!"
             self.active = False
             logger.debug(f"[ATTACK_INPUT] Error: {self.error_message}")
+            # Forzar actualización inmediata
+            self.force_update()
             return self.error_message
-
     def handle_attack(self, mouse_pos, row, col):
         logger = logging.getLogger(__name__)
         logger.debug(f"[ATTACK] Attempting to attack ({row},{col})")
@@ -857,11 +862,27 @@ class GameSurface:
             
             # Update the interface to show waiting for response
             self.status_message = "Waiting for result..."
-            self.status_timer = pygame.time.get_ticks() + 5000
+            self.status_timer = pygame.time.get_ticks() + 5000  # Reducido a 5 segundos
             self.status_color = (255, 255, 0)
             
             # Force screen update
             self.force_update()
+            
+            # Esperar activamente el resultado por un corto tiempo (máximo 2 segundos)
+            start_time = pygame.time.get_ticks()
+            while pygame.time.get_ticks() - start_time < 2000:  # 2 segundos máximo de espera activa
+                # Procesar mensajes entrantes
+                msg = self.connection.get_mensaje()
+                if msg and msg.get("type") == "result":
+                    # Procesar el resultado inmediatamente
+                    self._procesar_mensaje_red(msg)
+                    # Actualizar la pantalla inmediatamente
+                    self.force_update()
+                    logger.debug("[ATTACK] Result received and processed immediately")
+                    break
+                
+                # Pequeña pausa para no saturar la CPU
+                pygame.time.wait(10)
             
             self.debug_state()
             return "shot_made"
@@ -882,7 +903,7 @@ class GameSurface:
 
         try:
             # Reducir el tiempo de espera de select para mayor responsividad
-            ready, _, _ = select.select([self.connection.canal], [], [], 0.05)
+            ready, _, _ = select.select([self.connection.canal], [], [], 0.01)  # Reducido a 0.01s para mayor responsividad
             if ready:
                 datos = self.connection.canal.recv(self.connection.bufsize).decode("utf-8")
                 if not datos:
@@ -895,7 +916,11 @@ class GameSurface:
                     raw, self._recv_buffer = self._recv_buffer.split('\n', 1)
                     try:
                         msg = json.loads(raw)
+                        # Procesar el mensaje inmediatamente
                         self._procesar_mensaje_red(msg)
+                        # Forzar actualización inmediata si es un resultado de ataque
+                        if msg.get("type") in ["result", "attack", "victory"]:
+                            self.force_update()
                     except json.JSONDecodeError as e:
                         logger.warning(f"[WAIT] Invalid JSON received: {e}")
 
@@ -937,6 +962,8 @@ class GameSurface:
             self.status_message = "It's your turn"
             self.status_timer = pygame.time.get_ticks() + 3000
             self.status_color = (0, 255, 0)
+            # Forzar actualización inmediata
+            self.force_update()
 
         elif msg["type"] == "turn_complete":
             logger.debug("[NET] Opponent's turn finished. It's your turn now.")
@@ -945,6 +972,8 @@ class GameSurface:
             self.status_message = "It's your turn"
             self.status_timer = pygame.time.get_ticks() + 3000
             self.status_color = (0, 255, 0)
+            # Forzar actualización inmediata
+            self.force_update()
 
         elif msg["type"] == "attack":
             if not all(k in msg for k in ("row", "col")):
@@ -965,6 +994,7 @@ class GameSurface:
                 result = self.opponent.shoot_at_opponent(self.player, row, col)
                 logger.debug(f"[NET] Shot result: {result}")
 
+                # Enviar resultado inmediatamente
                 self.connection.enviar_datos({
                     "type": "result",
                     "result": result,
@@ -987,6 +1017,8 @@ class GameSurface:
                 else:
                     self.shot_made = False
                     self.state = "waiting_for_opponent"
+                    # Forzar actualización inmediata
+                    self.force_update()
 
             except Exception as e:
                 logger.exception("[NET] Error processing attack")
@@ -1111,10 +1143,10 @@ class GameSurface:
             self.action_taken = False
             self.selected_ship = None
 
-            # On-screen message in English
+            # On-screen message in English (aumentado a 60 segundos)
             self.status_message = "Waiting for opponent's turn..."
             self.status_color = (255, 255, 0)
-            self.status_timer = pygame.time.get_ticks() + 5000
+            self.status_timer = pygame.time.get_ticks() + 60000
 
             logger.debug("[END TURN] Turn ended, waiting for opponent.")
 
